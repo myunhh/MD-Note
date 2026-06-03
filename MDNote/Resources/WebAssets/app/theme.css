@@ -137,4 +137,8 @@ body.paper-dots {
 .md-content img { max-width: 100%; border-radius: 8px; }
 
 /* Task lists */
-.md-content input[type="checkbox"] { margin-right: 0.5em; }
+.md-content li.task-list-item { list-style: none; margin-left: -1.3em; }
+.md-content input[type="checkbox"] { margin-right: 0.5em; transform: translateY(1px); }
+
+/* Math (KaTeX) */
+.md-content .katex-display { overflow-x: auto; overflow-y: hidden; padding: 2px 0; }

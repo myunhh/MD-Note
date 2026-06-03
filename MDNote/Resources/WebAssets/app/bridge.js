@@ -85,11 +85,42 @@
     });
   }
 
+  // GFM task lists: turn "[ ] / [x]" list items into checkboxes.
+  function transformChecklists(root) {
+    var re = /^(\s*(?:<p>\s*)?)\[( |x|X)\]\s+/;
+    root.querySelectorAll("li").forEach(function (li) {
+      var m = li.innerHTML.match(re);
+      if (!m) return;
+      li.classList.add("task-list-item");
+      var checked = m[2].toLowerCase() === "x" ? " checked" : "";
+      li.innerHTML = li.innerHTML.replace(re, m[1] + '<input type="checkbox" disabled' + checked + "> ");
+    });
+  }
+
+  // LaTeX math via KaTeX auto-render. Runs after block hashing so identities
+  // stay tied to the math source, not the rendered output.
+  function renderMath(root) {
+    if (!window.renderMathInElement) return;
+    try {
+      window.renderMathInElement(root, {
+        delimiters: [
+          { left: "$$", right: "$$", display: true },
+          { left: "\\[", right: "\\]", display: true },
+          { left: "$", right: "$", display: false },
+          { left: "\\(", right: "\\)", display: false }
+        ],
+        throwOnError: false
+      });
+    } catch (e) { /* ignore */ }
+  }
+
   function render(markdown) {
     var root = document.getElementById("content");
     root.innerHTML = md.render(markdown || "");
+    transformChecklists(root);
     tagBlocks(root);
     highlightCode(root);
+    renderMath(root);
     document.body.className = "paper-" + paperStyle;
     return root.querySelectorAll("[data-source-line]").length;
   }
