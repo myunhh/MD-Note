@@ -15,6 +15,10 @@ import MDNoteCore
 @MainActor
 final class DocumentCanvasViewController: UIViewController {
 
+    /// Matches the web theme's --paper so the area around/beyond the page reads
+    /// as one continuous (writable) sheet rather than dead gray space.
+    private static let paperColor = UIColor(red: 251/255, green: 250/255, blue: 247/255, alpha: 1)
+
     weak var session: DocumentSession?
 
     private let renderer = MarkdownRenderer()
@@ -44,7 +48,7 @@ final class DocumentCanvasViewController: UIViewController {
 
     override func viewDidLoad() {
         super.viewDidLoad()
-        view.backgroundColor = UIColor.systemGray4
+        view.backgroundColor = Self.paperColor
 
         // Web view behind, in a plain container we transform to follow the canvas.
         view.addSubview(webContainer)
@@ -86,6 +90,7 @@ final class DocumentCanvasViewController: UIViewController {
     override func viewDidLayoutSubviews() {
         super.viewDidLayoutSubviews()
         updateZoomLimits()
+        enforceContentSize()
         syncWeb()
     }
 
@@ -163,6 +168,18 @@ final class DocumentCanvasViewController: UIViewController {
         canvasView.contentSize = CGSize(width: pageWidth, height: contentHeight)
         updateZoomLimits()
         syncWeb()
+    }
+
+    /// PencilKit may shrink the scroll content toward the drawing's bounds, which
+    /// can leave the right writing margin unreachable/undrawable. Keep the full
+    /// page (text column + writing margin) drawable by enforcing the page size.
+    private func enforceContentSize() {
+        guard contentHeight > 1 else { return }
+        if canvasView.contentSize.width < pageWidth || canvasView.contentSize.height < contentHeight {
+            canvasView.contentSize = CGSize(
+                width: max(canvasView.contentSize.width, pageWidth),
+                height: max(canvasView.contentSize.height, contentHeight))
+        }
     }
 
     /// Min zoom = "fit the full page width" (whole width incl. the right writing
@@ -297,6 +314,7 @@ final class DocumentCanvasViewController: UIViewController {
 
 extension DocumentCanvasViewController: PKCanvasViewDelegate {
     func canvasViewDrawingDidChange(_ canvasView: PKCanvasView) {
+        enforceContentSize()
         guard !isRestoring, let store = inkStore, !currentBlocks.isEmpty else { return }
         store.capture(drawing: canvasView.drawing, blocks: currentBlocks)
         scheduleSave()
