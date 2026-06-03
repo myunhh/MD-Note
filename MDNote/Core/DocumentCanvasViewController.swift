@@ -37,6 +37,8 @@ final class DocumentCanvasViewController: UIViewController {
     private var currentBlocks: [Block] = []
     private var inkStore: InkStore?
     private var saveWorkItem: DispatchWorkItem?
+    private var fileWatcher: FileWatcher?
+    private var reloadWorkItem: DispatchWorkItem?
 
     // MARK: Lifecycle
 
@@ -87,7 +89,10 @@ final class DocumentCanvasViewController: UIViewController {
         syncWeb()
     }
 
-    deinit { NotificationCenter.default.removeObserver(self) }
+    deinit {
+        NotificationCenter.default.removeObserver(self)
+        fileWatcher?.stop()
+    }
 
     // MARK: Public
 
@@ -96,6 +101,9 @@ final class DocumentCanvasViewController: UIViewController {
         currentURL = url
         inkStore = InkStore(documentURL: url)
         didInitialZoom = false
+        fileWatcher?.stop()
+        fileWatcher = FileWatcher(url: url) { [weak self] in self?.scheduleReloadCheck() }
+        fileWatcher?.start()
         Task { await loadAndRender(initial: true) }
     }
 
@@ -253,7 +261,18 @@ final class DocumentCanvasViewController: UIViewController {
 
     // MARK: External change detection
 
-    @objc private func appWillEnterForeground() {
+    @objc private func appWillEnterForeground() { reloadIfChanged() }
+
+    /// Debounce rapid file-coordination notifications (an atomic save can fire
+    /// several) before checking whether to reload.
+    private func scheduleReloadCheck() {
+        reloadWorkItem?.cancel()
+        let work = DispatchWorkItem { [weak self] in self?.reloadIfChanged() }
+        reloadWorkItem = work
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3, execute: work)
+    }
+
+    private func reloadIfChanged() {
         guard let url = currentURL,
               let text = try? String(contentsOf: url, encoding: .utf8) else { return }
         if Hashing.documentHash(text) != lastDocHash {
