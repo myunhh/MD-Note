@@ -14,6 +14,19 @@ struct DocumentScreen: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItemGroup(placement: .topBarTrailing) {
+                    Menu {
+                        Picker("종이 배경", selection: Binding(
+                            get: { session.paperStyle },
+                            set: { session.setPaper($0) }
+                        )) {
+                            Text("플레인").tag("plain")
+                            Text("줄").tag("ruled")
+                            Text("모눈").tag("grid")
+                            Text("점").tag("dots")
+                        }
+                    } label: {
+                        Image(systemName: "square.grid.3x3")
+                    }
                     Button { session.undo() } label: {
                         Image(systemName: "arrow.uturn.backward")
                     }

@@ -29,6 +29,7 @@ final class DocumentCanvasViewController: UIViewController {
     private var didInitialZoom = false
     private var isRestoring = false
     private var toolPickerVisible = true
+    private var paperStyle = UserDefaults.standard.string(forKey: "paperStyle") ?? "plain"
 
     private var currentURL: URL?
     private var documentText = ""
@@ -108,6 +109,7 @@ final class DocumentCanvasViewController: UIViewController {
 
         await renderer.loadAssetsIfNeeded()
         await renderer.render(markdown: text)
+        await renderer.setPaper(paperStyle)
         let height = await renderer.contentHeight()
         let newBlocks = await renderer.blocks()
         applyContentSize(height)
@@ -131,6 +133,7 @@ final class DocumentCanvasViewController: UIViewController {
         isRestoring = false
 
         store.save(blocks: newBlocks, documentText: text)
+        session?.paperStyle = paperStyle
         refreshOrphans()
         activateToolPicker()
     }
@@ -201,6 +204,13 @@ final class DocumentCanvasViewController: UIViewController {
 
     func undo() { canvasView.undoManager?.undo() }
     func redo() { canvasView.undoManager?.redo() }
+
+    func setPaper(_ style: String) {
+        paperStyle = style
+        UserDefaults.standard.set(style, forKey: "paperStyle")
+        session?.paperStyle = style
+        Task { await renderer.setPaper(style) }
+    }
 
     // MARK: Orphan tray
 

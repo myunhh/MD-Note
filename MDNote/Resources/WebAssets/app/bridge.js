@@ -14,6 +14,7 @@
   "use strict";
 
   var PAGE_WIDTH = 1700;
+  var paperStyle = "plain";
 
   // --- Hashing (must match Swift MDNoteCore.Hashing) ----------------------
 
@@ -89,6 +90,7 @@
     root.innerHTML = md.render(markdown || "");
     tagBlocks(root);
     highlightCode(root);
+    document.body.className = "paper-" + paperStyle;
     return root.querySelectorAll("[data-source-line]").length;
   }
 
@@ -124,6 +126,11 @@
     return Math.ceil(document.documentElement.scrollHeight);
   }
 
+  function setPaper(style) {
+    paperStyle = style || "plain";
+    if (document.body) { document.body.className = "paper-" + paperStyle; }
+  }
+
   window.MDNote = {
     pageWidth: PAGE_WIDTH,
     render: render,
@@ -131,5 +138,8 @@
     contentHeight: contentHeight,
     blockHash: blockHash,
     normalize: normalize,
+    setPaper: setPaper,
   };
+
+  setPaper(paperStyle);
 })();

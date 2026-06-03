@@ -15,6 +15,7 @@ final class DocumentSession: ObservableObject {
     @Published var status: String?
     @Published var orphans: [OrphanItem] = []
     @Published var toolsVisible = true
+    @Published var paperStyle: String = UserDefaults.standard.string(forKey: "paperStyle") ?? "plain"
 
     weak var controller: DocumentCanvasViewController?
 
@@ -26,6 +27,7 @@ final class DocumentSession: ObservableObject {
     func toggleTools() { controller?.toggleToolPicker() }
     func undo() { controller?.undo() }
     func redo() { controller?.redo() }
+    func setPaper(_ style: String) { controller?.setPaper(style) }
 }
 
 /// The bottom-sheet tray listing handwriting that lost its anchor block after an

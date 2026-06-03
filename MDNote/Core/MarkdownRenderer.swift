@@ -50,6 +50,11 @@ final class MarkdownRenderer: NSObject {
         _ = try? await webView.evaluateJavaScript("MDNote.render(\(literal))")
     }
 
+    /// Set the paper background style ("plain" / "ruled" / "grid" / "dots").
+    func setPaper(_ style: String) async {
+        _ = try? await webView.evaluateJavaScript("MDNote.setPaper('\(style)')")
+    }
+
     func contentHeight() async -> CGFloat {
         let any = (try? await webView.evaluateJavaScript("MDNote.contentHeight()")) ?? nil
         if let n = any as? NSNumber { return CGFloat(truncating: n) }

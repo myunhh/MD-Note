@@ -12,8 +12,15 @@
   --ink: #2b2b2b;
   --ink-soft: #555047;
   --rule: #e7e3da;
+  --line: #e3ded2;          /* paper ruling / grid / dots */
   --accent: #c2410c;
   --code-bg: #f3f1ea;
+  /* vertical divider where the text column ends and the writing margin begins */
+  --divider: linear-gradient(to right,
+    transparent calc(var(--content-width) - 1px),
+    var(--rule) calc(var(--content-width) - 1px),
+    var(--rule) var(--content-width),
+    transparent var(--content-width));
 }
 
 * { box-sizing: border-box; }
@@ -32,14 +39,33 @@ body {
   font-size: 18px;
   line-height: 1.75;
   -webkit-font-smoothing: antialiased;
-  /* faint vertical divider marking where the text column ends and the
-     writing margin begins */
-  background-image: linear-gradient(to right,
-    transparent calc(var(--content-width) - 1px),
-    var(--rule) calc(var(--content-width) - 1px),
-    var(--rule) var(--content-width),
-    transparent var(--content-width));
+}
+
+/* Paper styles — the right writing margin shows these clearly. Default = plain. */
+body.paper-plain {
+  background-image: var(--divider);
   background-repeat: no-repeat;
+}
+body.paper-ruled {
+  background-image:
+    repeating-linear-gradient(to bottom, transparent 0 35px, var(--line) 35px 36px),
+    var(--divider);
+  background-repeat: repeat, no-repeat;
+}
+body.paper-grid {
+  background-image:
+    repeating-linear-gradient(to bottom, transparent 0 35px, var(--line) 35px 36px),
+    repeating-linear-gradient(to right, transparent 0 35px, var(--line) 35px 36px),
+    var(--divider);
+  background-repeat: repeat, repeat, no-repeat;
+}
+body.paper-dots {
+  background-image:
+    radial-gradient(circle, var(--line) 1.2px, transparent 1.5px),
+    var(--divider);
+  background-size: 28px 28px, auto;
+  background-position: 18px 18px, 0 0;
+  background-repeat: repeat, no-repeat;
 }
 
 .md-content {
