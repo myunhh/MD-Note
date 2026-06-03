@@ -1,0 +1,114 @@
+/* MD Note — GoodNotes/Notion-flavoured paper theme.
+   The page is a FIXED total width (--page-width). Markdown text renders in a
+   left column (--content-width); the remaining width on the right is a blank
+   writing margin for extra handwriting. Height is driven purely by the content,
+   so the margin runs the full length of the document. The native outer scroll
+   view centers/zooms the whole page, keeping the ink canvas pixel-locked. */
+
+:root {
+  --page-width: 1700px;     /* total canvas: text column + right writing margin */
+  --content-width: 1080px;  /* markdown text column (left-aligned) */
+  --paper: #fbfaf7;
+  --ink: #2b2b2b;
+  --ink-soft: #555047;
+  --rule: #e7e3da;
+  --accent: #c2410c;
+  --code-bg: #f3f1ea;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  width: var(--page-width);
+  background-color: var(--paper);
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  color: var(--ink);
+  font-family: -apple-system, "SF Pro Text", "Helvetica Neue", "Apple SD Gothic Neo", system-ui, sans-serif;
+  font-size: 18px;
+  line-height: 1.75;
+  -webkit-font-smoothing: antialiased;
+  /* faint vertical divider marking where the text column ends and the
+     writing margin begins */
+  background-image: linear-gradient(to right,
+    transparent calc(var(--content-width) - 1px),
+    var(--rule) calc(var(--content-width) - 1px),
+    var(--rule) var(--content-width),
+    transparent var(--content-width));
+  background-repeat: no-repeat;
+}
+
+.md-content {
+  width: var(--content-width);
+  /* page-like margins; big bottom pad to write past the last block */
+  padding: 88px 90px 440px;
+}
+
+/* Headings */
+.md-content h1, .md-content h2, .md-content h3,
+.md-content h4, .md-content h5, .md-content h6 {
+  line-height: 1.3;
+  font-weight: 700;
+  margin: 1.6em 0 0.5em;
+  letter-spacing: -0.01em;
+}
+.md-content h1 { font-size: 2.1em; margin-top: 0; }
+.md-content h2 { font-size: 1.6em; padding-bottom: 0.2em; border-bottom: 1px solid var(--rule); }
+.md-content h3 { font-size: 1.3em; }
+.md-content h4 { font-size: 1.1em; }
+.md-content h5, .md-content h6 { font-size: 1em; color: var(--ink-soft); }
+
+/* Body */
+.md-content p { margin: 0.7em 0; }
+.md-content a { color: var(--accent); text-decoration: none; }
+.md-content strong { font-weight: 700; }
+.md-content em { font-style: italic; }
+
+/* Lists */
+.md-content ul, .md-content ol { margin: 0.6em 0; padding-left: 1.6em; }
+.md-content li { margin: 0.25em 0; }
+.md-content li::marker { color: var(--ink-soft); }
+
+/* Quote */
+.md-content blockquote {
+  margin: 1em 0;
+  padding: 0.3em 1.1em;
+  border-left: 4px solid var(--rule);
+  color: var(--ink-soft);
+}
+
+/* Code */
+.md-content code {
+  font-family: "SF Mono", ui-monospace, "JetBrains Mono", Menlo, monospace;
+  font-size: 0.88em;
+  background: var(--code-bg);
+  padding: 0.12em 0.36em;
+  border-radius: 5px;
+}
+.md-content pre {
+  background: var(--code-bg);
+  border: 1px solid var(--rule);
+  border-radius: 10px;
+  padding: 16px 18px;
+  overflow-x: auto;
+  line-height: 1.55;
+}
+.md-content pre code { background: none; padding: 0; font-size: 0.86em; }
+
+/* Rule */
+.md-content hr { border: none; border-top: 1px solid var(--rule); margin: 2em 0; }
+
+/* Tables */
+.md-content table { border-collapse: collapse; margin: 1em 0; width: 100%; font-size: 0.95em; }
+.md-content th, .md-content td { border: 1px solid var(--rule); padding: 8px 12px; text-align: left; }
+.md-content th { background: var(--code-bg); font-weight: 700; }
+
+/* Images */
+.md-content img { max-width: 100%; border-radius: 8px; }
+
+/* Task lists */
+.md-content input[type="checkbox"] { margin-right: 0.5em; }

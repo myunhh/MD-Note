@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <!-- Zooming is handled by the native outer scroll view so the web layer stays
+       pixel-locked to the PencilKit canvas. Disable the web view's own zoom. -->
+  <meta name="viewport" content="width=1700, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no">
+  <link rel="stylesheet" href="vendor/highlight-github.css">
+  <link rel="stylesheet" href="app/theme.css">
+</head>
+<body>
+  <div id="content" class="md-content"></div>
+  <script src="vendor/markdown-it.min.js"></script>
+  <script src="vendor/highlight.min.js"></script>
+  <script src="app/bridge.js"></script>
+</body>
+</html>

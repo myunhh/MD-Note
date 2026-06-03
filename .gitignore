@@ -1,0 +1,25 @@
+# macOS
+.DS_Store
+
+# Xcode / build
+build/
+DerivedData/
+*.xcodeproj
+xcuserdata/
+*.xcuserstate
+*.xcscmblueprint
+
+# Swift Package Manager
+.build/
+.swiftpm/
+Package.resolved
+
+# Node (web asset tooling only)
+node_modules/
+
+# Generated web vendor bundle is committed on purpose (offline rendering),
+# but the npm scratch dir is not.
+WebAssets/.npm-scratch/
+
+# Claude Code local settings
+.claude/settings.local.json
