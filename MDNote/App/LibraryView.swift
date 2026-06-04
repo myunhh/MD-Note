@@ -112,6 +112,17 @@ final class LibraryStore: ObservableObject {
         load(directory: directory)
     }
 
+    /// Import a whole folder (e.g. a note plus its `images/` subfolder) so local
+    /// images come along. Picking the folder grants access to its contents,
+    /// which picking a single file does not.
+    func importFolder(from url: URL) {
+        let scoped = url.startAccessingSecurityScopedResource()
+        defer { if scoped { url.stopAccessingSecurityScopedResource() } }
+        let dest = uniqueURL(directory.appendingPathComponent(url.lastPathComponent), isDirectory: true)
+        try? FileManager.default.copyItem(at: url, to: dest)
+        load(directory: directory)
+    }
+
     // MARK: Helpers
 
     private func makeDoc(_ url: URL) -> LibraryDoc {
@@ -179,6 +190,7 @@ struct LibraryView: View {
     @StateObject private var store = LibraryStore()
 
     @State private var showImporter = false
+    @State private var showFolderImporter = false
     @State private var showPrompt = false
     @State private var promptTitle = ""
     @State private var promptPlaceholder = ""
@@ -228,7 +240,8 @@ struct LibraryView: View {
                     Button { askNewNote() } label: { Label("새 노트", systemImage: "doc.badge.plus") }
                     Button { askNewFolder() } label: { Label("새 폴더", systemImage: "folder.badge.plus") }
                     Divider()
-                    Button { showImporter = true } label: { Label("가져오기", systemImage: "square.and.arrow.down") }
+                    Button { showImporter = true } label: { Label("파일 가져오기", systemImage: "doc") }
+                    Button { showFolderImporter = true } label: { Label("폴더 가져오기 (이미지 포함)", systemImage: "folder") }
                 } label: {
                     Image(systemName: "plus")
                 }
@@ -243,6 +256,11 @@ struct LibraryView: View {
                       allowedContentTypes: markdownTypes,
                       allowsMultipleSelection: true) { result in
             if case .success(let urls) = result { urls.forEach(store.importFile) }
+        }
+        .fileImporter(isPresented: $showFolderImporter,
+                      allowedContentTypes: [.folder],
+                      allowsMultipleSelection: false) { result in
+            if case .success(let urls) = result, let url = urls.first { store.importFolder(from: url) }
         }
         .onAppear { store.load(directory: directory) }
     }
