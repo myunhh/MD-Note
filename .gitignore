@@ -5,6 +5,7 @@
 build/
 DerivedData/
 *.xcodeproj
+MDNote/Info.plist
 xcuserdata/
 *.xcuserstate
 *.xcscmblueprint
