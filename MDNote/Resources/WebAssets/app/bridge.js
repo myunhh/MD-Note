@@ -114,9 +114,24 @@
     } catch (e) { /* ignore */ }
   }
 
+  // Resolve relative <img> sources against the document's folder, served by the
+  // native side through the mdasset:// scheme.
+  function rewriteImages(root) {
+    root.querySelectorAll("img").forEach(function (img) {
+      var src = img.getAttribute("src") || "";
+      if (!src) return;
+      // leave absolute (scheme:), protocol-relative (//), and root-absolute (/)
+      if (/^[a-z][a-z0-9+.-]*:/i.test(src) || src.indexOf("//") === 0 || src.charAt(0) === "/") return;
+      var clean = src.replace(/^\.\//, "");
+      var encoded = clean.split("/").map(encodeURIComponent).join("/");
+      img.setAttribute("src", "mdasset://local/" + encoded);
+    });
+  }
+
   function render(markdown) {
     var root = document.getElementById("content");
     root.innerHTML = md.render(markdown || "");
+    rewriteImages(root);
     transformChecklists(root);
     tagBlocks(root);
     highlightCode(root);

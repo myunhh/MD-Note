@@ -121,6 +121,7 @@ final class DocumentCanvasViewController: UIViewController {
         let newHash = Hashing.documentHash(text)
 
         await renderer.loadAssetsIfNeeded()
+        renderer.setAssetBase(url.deletingLastPathComponent())
         await renderer.render(markdown: text)
         await renderer.setPaper(paperStyle)
         let height = await renderer.contentHeight()
