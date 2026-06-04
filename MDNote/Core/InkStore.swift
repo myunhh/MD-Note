@@ -14,7 +14,7 @@ final class InkStore {
     let documentURL: URL
     private(set) var ink: [AnchoredInk] = []
     private(set) var orphans: [AnchoredInk] = []
-    var layoutWidth: CGFloat = 1700
+    var layoutWidth: CGFloat = 1390
 
     /// `Foo.md` -> `Foo.md.inknote`
     var sidecarURL: URL { documentURL.appendingPathExtension("inknote") }

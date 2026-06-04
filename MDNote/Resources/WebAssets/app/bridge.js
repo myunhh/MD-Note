@@ -13,7 +13,7 @@
 (function () {
   "use strict";
 
-  var PAGE_WIDTH = 1700;
+  var PAGE_WIDTH = 1390;
   var paperStyle = "plain";
 
   // --- Hashing (must match Swift MDNoteCore.Hashing) ----------------------

@@ -11,8 +11,8 @@ final class MarkdownRenderer: NSObject {
     private var didLoadAssets = false
 
     /// Total page width the web layer lays out at (must match theme.css / bridge.js):
-    /// a 1080pt text column on the left + a blank right writing margin = 1700pt.
-    let pageWidth: CGFloat = 1700
+    /// a 1080pt text column on the left + a blank right writing margin = 1390pt.
+    let pageWidth: CGFloat = 1390
 
     override init() {
         let config = WKWebViewConfiguration()

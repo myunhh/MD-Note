@@ -6,7 +6,7 @@
    view centers/zooms the whole page, keeping the ink canvas pixel-locked. */
 
 :root {
-  --page-width: 1700px;     /* total canvas: text column + right writing margin */
+  --page-width: 1390px;     /* total canvas: text column + right writing margin */
   --content-width: 1080px;  /* markdown text column (left-aligned) */
   --paper: #fbfaf7;
   --ink: #2b2b2b;
