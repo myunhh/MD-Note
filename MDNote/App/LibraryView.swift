@@ -190,7 +190,7 @@ struct LibraryView: View {
     @StateObject private var store = LibraryStore()
 
     @State private var showImporter = false
-    @State private var showFolderImporter = false
+    @State private var importIsFolder = false
     @State private var showPrompt = false
     @State private var promptTitle = ""
     @State private var promptPlaceholder = ""
@@ -240,8 +240,8 @@ struct LibraryView: View {
                     Button { askNewNote() } label: { Label("새 노트", systemImage: "doc.badge.plus") }
                     Button { askNewFolder() } label: { Label("새 폴더", systemImage: "folder.badge.plus") }
                     Divider()
-                    Button { showImporter = true } label: { Label("파일 가져오기", systemImage: "doc") }
-                    Button { showFolderImporter = true } label: { Label("폴더 가져오기 (이미지 포함)", systemImage: "folder") }
+                    Button { importIsFolder = false; showImporter = true } label: { Label("파일 가져오기", systemImage: "doc") }
+                    Button { importIsFolder = true; showImporter = true } label: { Label("폴더 가져오기 (이미지 포함)", systemImage: "folder") }
                 } label: {
                     Image(systemName: "plus")
                 }
@@ -253,14 +253,11 @@ struct LibraryView: View {
             Button("취소", role: .cancel) {}
         }
         .fileImporter(isPresented: $showImporter,
-                      allowedContentTypes: markdownTypes,
-                      allowsMultipleSelection: true) { result in
-            if case .success(let urls) = result { urls.forEach(store.importFile) }
-        }
-        .fileImporter(isPresented: $showFolderImporter,
-                      allowedContentTypes: [.folder],
-                      allowsMultipleSelection: false) { result in
-            if case .success(let urls) = result, let url = urls.first { store.importFolder(from: url) }
+                      allowedContentTypes: importIsFolder ? [.folder] : markdownTypes,
+                      allowsMultipleSelection: !importIsFolder) { result in
+            guard case .success(let urls) = result else { return }
+            if importIsFolder { urls.forEach(store.importFolder) }
+            else { urls.forEach(store.importFile) }
         }
         .onAppear { store.load(directory: directory) }
     }
