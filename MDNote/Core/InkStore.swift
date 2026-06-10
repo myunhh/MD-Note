@@ -11,7 +11,7 @@ import MDNoteCore
 /// *current* origin — so when the block moves, the ink follows.
 @MainActor
 final class InkStore {
-    let documentURL: URL
+    private(set) var documentURL: URL
     private(set) var ink: [AnchoredInk] = []
     private(set) var orphans: [AnchoredInk] = []
     var layoutWidth: CGFloat = 1390
@@ -20,6 +20,17 @@ final class InkStore {
     var sidecarURL: URL { documentURL.appendingPathExtension("inknote") }
 
     init(documentURL: URL) { self.documentURL = documentURL }
+
+    /// Follow an external move/rename of the document: point at the new URL
+    /// and bring the sidecar file along so future saves stay paired.
+    func relocate(to newURL: URL) {
+        guard newURL != documentURL else { return }
+        let oldSidecar = sidecarURL
+        documentURL = newURL
+        if FileManager.default.fileExists(atPath: oldSidecar.path) {
+            try? FileManager.default.moveItem(at: oldSidecar, to: sidecarURL)
+        }
+    }
 
     // MARK: Capture (PencilKit -> anchors)
 
@@ -48,7 +59,14 @@ final class InkStore {
                 strokeData: relative.dataRepresentation()
             ))
         }
-        ink = items
+
+        // Ink anchored to a block that's absent from the current layout never
+        // made it into the live drawing (rebuildDrawing skips it), so the
+        // re-derivation above can't see it. Carry it forward instead of
+        // silently dropping it.
+        let liveKeys = Set(blocks.map(Self.key))
+        let unresolved = ink.filter { !liveKeys.contains("\($0.blockHash)#\($0.blockSeq)") }
+        ink = items + unresolved
     }
 
     // MARK: Render (anchors -> PencilKit)
@@ -142,17 +160,48 @@ final class InkStore {
     func load() -> Sidecar? {
         guard FileManager.default.fileExists(atPath: sidecarURL.path) else { return nil }
         var loaded: Sidecar?
+        var hadData = false
         var coordError: NSError?
         NSFileCoordinator().coordinate(readingItemAt: sidecarURL, options: [], error: &coordError) { url in
             guard let data = try? Data(contentsOf: url) else { return }
+            hadData = true
             loaded = try? Sidecar.decoded(from: data)
         }
         if let loaded {
             ink = loaded.ink
             orphans = loaded.orphans
             layoutWidth = loaded.layoutWidth
+        } else if hadData {
+            // Undecodable (corrupted, or written by a newer app version).
+            // Preserve the bytes before the next save overwrites them.
+            let backup = sidecarURL.appendingPathExtension("corrupt")
+            try? FileManager.default.removeItem(at: backup)
+            try? FileManager.default.copyItem(at: sidecarURL, to: backup)
         }
         return loaded
+    }
+
+    /// If this document has no sidecar, look for one stranded by an external
+    /// rename (`Old.md.inknote` left behind after `Old.md` -> `New.md` in the
+    /// Files app): a sibling whose own markdown file is gone and whose stored
+    /// documentHash matches this document's exact text. Conservative on
+    /// purpose — a rename + edit won't match and the stranded file stays put.
+    func adoptStrandedSidecarIfNeeded(documentText: String) {
+        let fm = FileManager.default
+        guard !fm.fileExists(atPath: sidecarURL.path) else { return }
+        let directory = documentURL.deletingLastPathComponent()
+        guard let entries = try? fm.contentsOfDirectory(
+            at: directory, includingPropertiesForKeys: nil, options: [.skipsHiddenFiles]) else { return }
+        let docHash = Hashing.documentHash(documentText)
+        for url in entries where url.pathExtension == "inknote" {
+            let owner = url.deletingPathExtension()
+            guard !fm.fileExists(atPath: owner.path),
+                  let data = try? Data(contentsOf: url),
+                  let sidecar = try? Sidecar.decoded(from: data),
+                  sidecar.documentHash == docHash else { continue }
+            try? fm.moveItem(at: url, to: sidecarURL)
+            return
+        }
     }
 
     // MARK: Helpers

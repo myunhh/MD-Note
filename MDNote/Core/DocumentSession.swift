@@ -16,10 +16,24 @@ final class DocumentSession: ObservableObject {
     @Published var orphans: [OrphanItem] = []
     @Published var toolsVisible = true
     @Published var paperStyle: String = UserDefaults.standard.string(forKey: "paperStyle") ?? "plain"
+    @Published var canUndo = false
+    @Published var canRedo = false
+    @Published var fingerDrawing = UserDefaults.standard.bool(forKey: "fingerDrawing")
+    @Published var outline: [OutlineItem] = []
 
     weak var controller: DocumentCanvasViewController?
+    private var statusDismiss: DispatchWorkItem?
 
     var orphanCount: Int { orphans.count }
+
+    /// Show a transient status capsule that dismisses itself.
+    func flash(_ message: String, duration: TimeInterval = 4) {
+        status = message
+        statusDismiss?.cancel()
+        let work = DispatchWorkItem { [weak self] in self?.status = nil }
+        statusDismiss = work
+        DispatchQueue.main.asyncAfter(deadline: .now() + duration, execute: work)
+    }
 
     func deleteOrphan(_ id: UUID) { controller?.deleteOrphan(id) }
     func restoreOrphan(_ id: UUID) { controller?.restoreOrphan(id) }
@@ -28,6 +42,9 @@ final class DocumentSession: ObservableObject {
     func undo() { controller?.undo() }
     func redo() { controller?.redo() }
     func setPaper(_ style: String) { controller?.setPaper(style) }
+    func setFingerDrawing(_ enabled: Bool) { controller?.setFingerDrawing(enabled) }
+    func scroll(to item: OutlineItem) { controller?.scroll(toDocumentY: item.y) }
+    func exportPDF() { controller?.exportPDF() }
 }
 
 /// The bottom-sheet tray listing handwriting that lost its anchor block after an

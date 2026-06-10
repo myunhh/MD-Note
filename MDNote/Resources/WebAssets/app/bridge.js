@@ -62,17 +62,57 @@
 
   // --- Rendering + block tagging -----------------------------------------
 
+  // Identity text for a block. textContent alone makes every image-only block
+  // (and hr) hash identically — annotated images would swap ink when reordered.
+  // Mix in each image's alt + src so distinct images get distinct identities.
+  function blockIdentityText(el) {
+    var text = el.textContent || "";
+    var imgs = el.querySelectorAll("img");
+    for (var i = 0; i < imgs.length; i++) {
+      text += " img:" + (imgs[i].getAttribute("alt") || "") +
+              " " + (imgs[i].getAttribute("src") || "");
+    }
+    return text;
+  }
+
   function tagBlocks(root) {
     var els = root.querySelectorAll("[data-source-line]");
     var seqCounts = {};
     els.forEach(function (el) {
-      var text = el.textContent || "";
-      var h = blockHash(text);
+      var h = blockHash(blockIdentityText(el));
       var seq = seqCounts[h] || 0;
       seqCounts[h] = seq + 1;
       el.setAttribute("data-block-hash", h);
       el.setAttribute("data-block-seq", String(seq));
     });
+  }
+
+  // --- Late layout shifts (images / web fonts) -----------------------------
+
+  // Images and KaTeX webfonts finish loading after render() has returned, and
+  // the native side has already measured geometry by then. Tell it to
+  // re-measure (debounced — several images can land in a burst).
+  var layoutNotifyTimer = null;
+  function scheduleLayoutNotify() {
+    if (layoutNotifyTimer) clearTimeout(layoutNotifyTimer);
+    layoutNotifyTimer = setTimeout(function () {
+      layoutNotifyTimer = null;
+      try {
+        window.webkit.messageHandlers.layoutChanged.postMessage(1);
+      } catch (e) { /* not running inside the app */ }
+    }, 150);
+  }
+
+  function watchImages(root) {
+    root.querySelectorAll("img").forEach(function (img) {
+      if (img.complete) return;
+      img.addEventListener("load", scheduleLayoutNotify);
+      img.addEventListener("error", scheduleLayoutNotify);
+    });
+  }
+
+  if (document.fonts && document.fonts.addEventListener) {
+    document.fonts.addEventListener("loadingdone", scheduleLayoutNotify);
   }
 
   // Syntax-highlight code blocks. Runs after tagBlocks; highlighting only
@@ -136,6 +176,7 @@
     tagBlocks(root);
     highlightCode(root);
     renderMath(root);
+    watchImages(root);
     document.body.className = "paper-" + paperStyle;
     return root.querySelectorAll("[data-source-line]").length;
   }
@@ -172,6 +213,38 @@
     return Math.ceil(document.documentElement.scrollHeight);
   }
 
+  // Clickable link regions in document coordinates. One entry per client rect
+  // (a wrapped link spans several). In-page anchors are skipped — markdown-it
+  // doesn't generate heading ids, so they'd go nowhere.
+  function links() {
+    var sx = window.scrollX || 0;
+    var sy = window.scrollY || 0;
+    var out = [];
+    document.querySelectorAll("#content a[href]").forEach(function (a) {
+      var href = a.getAttribute("href") || "";
+      if (!href || href.charAt(0) === "#") return;
+      Array.prototype.forEach.call(a.getClientRects(), function (r) {
+        if (r.width === 0 || r.height === 0) return;
+        out.push({ x: r.left + sx, y: r.top + sy, width: r.width, height: r.height, href: href });
+      });
+    });
+    return out;
+  }
+
+  // Headings (h1–h3) for outline/TOC navigation.
+  function outline() {
+    var sy = window.scrollY || 0;
+    var out = [];
+    document.querySelectorAll("#content h1, #content h2, #content h3").forEach(function (el) {
+      out.push({
+        level: parseInt(el.tagName.charAt(1), 10),
+        text: (el.textContent || "").trim(),
+        y: el.getBoundingClientRect().top + sy,
+      });
+    });
+    return out;
+  }
+
   function setPaper(style) {
     paperStyle = style || "plain";
     if (document.body) { document.body.className = "paper-" + paperStyle; }
@@ -182,6 +255,8 @@
     render: render,
     layout: layout,
     contentHeight: contentHeight,
+    links: links,
+    outline: outline,
     blockHash: blockHash,
     normalize: normalize,
     setPaper: setPaper,

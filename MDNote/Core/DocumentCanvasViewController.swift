@@ -1,5 +1,6 @@
 import UIKit
 import PencilKit
+import SafariServices
 import WebKit
 import MDNoteCore
 
@@ -31,16 +32,23 @@ final class DocumentCanvasViewController: UIViewController {
     private var pageWidth: CGFloat { renderer.pageWidth }
     private var contentHeight: CGFloat = 1000
     private var didInitialZoom = false
+    private var didRestoreViewState = false
     private var isRestoring = false
     private var toolPickerVisible = true
     private var paperStyle = UserDefaults.standard.string(forKey: "paperStyle") ?? "plain"
+    private var fingerDrawing = UserDefaults.standard.bool(forKey: "fingerDrawing")
 
+    /// URL the SwiftUI screen asked us to open (stable across this screen).
+    private var requestedURL: URL?
+    /// URL the document actually lives at now (follows external renames).
     private var currentURL: URL?
     private var documentText = ""
     private var lastDocHash = ""
     private var currentBlocks: [Block] = []
+    private var linkRegions: [LinkRegion] = []
     private var inkStore: InkStore?
     private var saveWorkItem: DispatchWorkItem?
+    private var stateWorkItem: DispatchWorkItem?
     private var fileWatcher: FileWatcher?
     private var reloadWorkItem: DispatchWorkItem?
 
@@ -60,7 +68,7 @@ final class DocumentCanvasViewController: UIViewController {
         canvasView.frame = view.bounds
         canvasView.autoresizingMask = [.flexibleWidth, .flexibleHeight]
         canvasView.delegate = self
-        canvasView.drawingPolicy = .pencilOnly        // finger scrolls/zooms, pencil draws
+        applyDrawingPolicy()                          // pencil draws; finger per setting
         canvasView.alwaysBounceVertical = true
         canvasView.backgroundColor = .clear           // show the web behind
         canvasView.isOpaque = false
@@ -69,17 +77,44 @@ final class DocumentCanvasViewController: UIViewController {
         canvasView.maximumZoomScale = 5.0
         view.addSubview(canvasView)
 
+        // Finger taps open links (pencil touches never reach this recognizer).
+        let tap = UITapGestureRecognizer(target: self, action: #selector(handleLinkTap(_:)))
+        tap.allowedTouchTypes = [NSNumber(value: UITouch.TouchType.direct.rawValue)]
+        canvasView.addGestureRecognizer(tap)
+
         // Mirror the canvas's scroll + zoom onto the web layer.
         zoomObservation = canvasView.observe(\.zoomScale, options: [.new]) { [weak self] _, _ in
-            MainActor.assumeIsolated { self?.syncWeb() }
+            MainActor.assumeIsolated {
+                self?.syncWeb()
+                self?.scheduleViewStatePersist()
+            }
         }
         offsetObservation = canvasView.observe(\.contentOffset, options: [.new]) { [weak self] _, _ in
-            MainActor.assumeIsolated { self?.syncWeb() }
+            MainActor.assumeIsolated {
+                self?.syncWeb()
+                self?.scheduleViewStatePersist()
+            }
+        }
+
+        // Images/web fonts finishing after the first measurement shift the
+        // layout; re-measure so blocks (and the ink anchored to them) match.
+        renderer.onLayoutChanged = { [weak self] in
+            guard let self else { return }
+            Task { await self.remeasureLayout() }
         }
 
         NotificationCenter.default.addObserver(
             self, selector: #selector(appWillEnterForeground),
             name: UIApplication.willEnterForegroundNotification, object: nil)
+        NotificationCenter.default.addObserver(
+            self, selector: #selector(appDidEnterBackground),
+            name: UIApplication.didEnterBackgroundNotification, object: nil)
+    }
+
+    override func viewWillDisappear(_ animated: Bool) {
+        super.viewWillDisappear(animated)
+        flushPendingSave()
+        persistViewState()
     }
 
     override func viewDidAppear(_ animated: Bool) {
@@ -102,14 +137,32 @@ final class DocumentCanvasViewController: UIViewController {
     // MARK: Public
 
     func open(url: URL) {
-        guard url != currentURL else { return }
+        // Compare against the URL the screen originally asked for, not
+        // currentURL: after an external rename currentURL moves with the file,
+        // and SwiftUI's update pass re-sends the (stale) original — reopening
+        // it would detach from the live document.
+        guard url != requestedURL else { return }
+        requestedURL = url
         currentURL = url
         inkStore = InkStore(documentURL: url)
         didInitialZoom = false
+        didRestoreViewState = false
         fileWatcher?.stop()
-        fileWatcher = FileWatcher(url: url) { [weak self] in self?.scheduleReloadCheck() }
+        fileWatcher = FileWatcher(
+            url: url,
+            onChange: { [weak self] in self?.scheduleReloadCheck() },
+            onMove: { [weak self] newURL in self?.documentDidMove(to: newURL) })
         fileWatcher?.start()
         Task { await loadAndRender(initial: true) }
+    }
+
+    /// Follow an external rename/move (Files app, Finder) so the open session —
+    /// and its sidecar — stays attached to the file.
+    private func documentDidMove(to newURL: URL) {
+        guard let old = currentURL, old != newURL else { return }
+        currentURL = newURL
+        inkStore?.relocate(to: newURL)
+        renderer.setAssetBase(newURL.deletingLastPathComponent())
     }
 
     // MARK: Render pipeline
@@ -117,7 +170,6 @@ final class DocumentCanvasViewController: UIViewController {
     private func loadAndRender(initial: Bool) async {
         guard let url = currentURL, let store = inkStore else { return }
         let text = (try? String(contentsOf: url, encoding: .utf8)) ?? "# 파일을 읽을 수 없습니다\n"
-        documentText = text
         let newHash = Hashing.documentHash(text)
 
         await renderer.loadAssetsIfNeeded()
@@ -126,9 +178,21 @@ final class DocumentCanvasViewController: UIViewController {
         await renderer.setPaper(paperStyle)
         let height = await renderer.contentHeight()
         let newBlocks = await renderer.blocks()
+
+        // A non-empty document that yields zero blocks means the web bridge
+        // failed, not that every block vanished — bail out rather than
+        // orphaning all ink and blanking the canvas. (lastDocHash stays stale,
+        // so the next change notification retries.)
+        if newBlocks.isEmpty,
+           !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            return
+        }
+
+        documentText = text
         applyContentSize(height)
 
         if initial {
+            store.adoptStrandedSidecarIfNeeded(documentText: text)
             if let sidecar = store.load(), sidecar.documentHash != newHash {
                 let result = store.applyExternalEdit(
                     oldBlocks: sidecar.blocks.map(\.block), newBlocks: newBlocks)
@@ -148,15 +212,39 @@ final class DocumentCanvasViewController: UIViewController {
 
         store.save(blocks: newBlocks, documentText: text)
         session?.paperStyle = paperStyle
+        session?.fingerDrawing = fingerDrawing
         refreshOrphans()
+        refreshUndoState()
+        await refreshNavigationAids()
         activateToolPicker()
+    }
+
+    /// Re-read geometry after a late layout shift (image/web font finished
+    /// loading). Block identities are unchanged — only frames move — so the
+    /// stored block-relative ink re-renders at the right spots.
+    private func remeasureLayout() async {
+        guard let store = inkStore, !currentBlocks.isEmpty else { return }
+        let height = await renderer.contentHeight()
+        let newBlocks = await renderer.blocks()
+        guard !newBlocks.isEmpty else { return }
+        applyContentSize(height)
+        currentBlocks = newBlocks
+        isRestoring = true
+        canvasView.drawing = store.rebuildDrawing(blocks: newBlocks)
+        isRestoring = false
+        await refreshNavigationAids()
+    }
+
+    private func refreshNavigationAids() async {
+        linkRegions = await renderer.links()
+        session?.outline = await renderer.outline()
     }
 
     private func reportReanchor(_ result: Reanchor.Result) {
         guard !(result.followed.isEmpty && result.orphaned.isEmpty) else { return }
         var msg = "문서 변경 감지 · 필기 \(result.followed.count)개 따라옴"
         if !result.orphaned.isEmpty { msg += " · \(result.orphaned.count)개 보관함" }
-        session?.status = msg
+        session?.flash(msg)
     }
 
     // MARK: Layout / zoom / web sync
@@ -168,7 +256,55 @@ final class DocumentCanvasViewController: UIViewController {
         renderer.webView.frame = webContainer.bounds
         canvasView.contentSize = CGSize(width: pageWidth, height: contentHeight)
         updateZoomLimits()
+        if !didRestoreViewState, contentHeight > 1, canvasView.bounds.width > 0 {
+            didRestoreViewState = true
+            restoreViewState()
+        }
         syncWeb()
+    }
+
+    // MARK: Per-document view state (zoom + scroll position)
+
+    private static func viewStateKey(_ url: URL) -> String { "docViewState:\(url.path)" }
+
+    /// Restore the last zoom/scroll for this document. The vertical position is
+    /// stored as a fraction of the content height, so it still lands near the
+    /// right spot after external edits changed the document's length.
+    private func restoreViewState() {
+        guard let url = currentURL else { return }
+        guard let state = UserDefaults.standard.dictionary(forKey: Self.viewStateKey(url)) as? [String: Double],
+              let zoom = state["zoom"], let fracY = state["fracY"] else {
+            canvasView.zoomScale = canvasView.minimumZoomScale
+            return
+        }
+        let z = max(canvasView.minimumZoomScale, min(CGFloat(zoom), canvasView.maximumZoomScale))
+        canvasView.zoomScale = z
+        let minY = -canvasView.adjustedContentInset.top
+        let maxY = max(minY, contentHeight * z - canvasView.bounds.height + canvasView.adjustedContentInset.bottom)
+        let maxX = max(0, pageWidth * z - canvasView.bounds.width)
+        canvasView.contentOffset = CGPoint(
+            x: min(max(CGFloat(state["x"] ?? 0), 0), maxX),
+            y: min(max(CGFloat(fracY) * contentHeight * z, minY), maxY))
+    }
+
+    private func scheduleViewStatePersist() {
+        guard didRestoreViewState else { return }
+        stateWorkItem?.cancel()
+        let work = DispatchWorkItem { [weak self] in self?.persistViewState() }
+        stateWorkItem = work
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5, execute: work)
+    }
+
+    private func persistViewState() {
+        stateWorkItem?.cancel()
+        stateWorkItem = nil
+        guard didRestoreViewState, let url = currentURL, contentHeight > 1 else { return }
+        let state: [String: Double] = [
+            "zoom": Double(canvasView.zoomScale),
+            "fracY": Double(canvasView.contentOffset.y / max(contentHeight * canvasView.zoomScale, 1)),
+            "x": Double(canvasView.contentOffset.x),
+        ]
+        UserDefaults.standard.set(state, forKey: Self.viewStateKey(url))
     }
 
     /// PencilKit may shrink the scroll content toward the drawing's bounds, which
@@ -228,14 +364,109 @@ final class DocumentCanvasViewController: UIViewController {
         session?.toolsVisible = toolPickerVisible
     }
 
-    func undo() { canvasView.undoManager?.undo() }
-    func redo() { canvasView.undoManager?.redo() }
+    func undo() {
+        canvasView.undoManager?.undo()
+        refreshUndoState()
+    }
+
+    func redo() {
+        canvasView.undoManager?.redo()
+        refreshUndoState()
+    }
+
+    private func refreshUndoState() {
+        session?.canUndo = canvasView.undoManager?.canUndo ?? false
+        session?.canRedo = canvasView.undoManager?.canRedo ?? false
+    }
 
     func setPaper(_ style: String) {
         paperStyle = style
         UserDefaults.standard.set(style, forKey: "paperStyle")
         session?.paperStyle = style
         Task { await renderer.setPaper(style) }
+    }
+
+    /// Allow/disallow drawing with a finger. With finger drawing on, PencilKit
+    /// moves scrolling to two fingers, so the single-scroll-owner setup holds.
+    func setFingerDrawing(_ enabled: Bool) {
+        fingerDrawing = enabled
+        UserDefaults.standard.set(enabled, forKey: "fingerDrawing")
+        applyDrawingPolicy()
+        session?.fingerDrawing = enabled
+    }
+
+    private func applyDrawingPolicy() {
+        canvasView.drawingPolicy = fingerDrawing ? .anyInput : .pencilOnly
+    }
+
+    // MARK: Links & outline
+
+    @objc private func handleLinkTap(_ recognizer: UITapGestureRecognizer) {
+        // With finger drawing on, a finger tap is a (dot) stroke — don't also
+        // open links from it.
+        guard canvasView.drawingPolicy == .pencilOnly, !linkRegions.isEmpty else { return }
+        let location = recognizer.location(in: canvasView)
+        let z = canvasView.zoomScale
+        let docPoint = CGPoint(x: location.x / z, y: location.y / z)
+        guard let region = linkRegions.first(where: {
+            $0.rect.insetBy(dx: -6, dy: -6).contains(docPoint)
+        }) else { return }
+        open(linkHref: region.href)
+    }
+
+    private func open(linkHref: String) {
+        guard let url = URL(string: linkHref) else { return }
+        switch url.scheme?.lowercased() {
+        case "http", "https":
+            present(SFSafariViewController(url: url), animated: true)
+        case "mailto":
+            UIApplication.shared.open(url)
+        default:
+            break
+        }
+    }
+
+    /// Scroll so the given document-coordinate y (e.g. an outline heading)
+    /// sits near the top of the viewport.
+    func scroll(toDocumentY y: Double) {
+        let z = canvasView.zoomScale
+        let minY = -canvasView.adjustedContentInset.top
+        let maxY = max(minY, canvasView.contentSize.height - canvasView.bounds.height
+                       + canvasView.adjustedContentInset.bottom)
+        let target = min(max(CGFloat(y) * z + minY - 16, minY), maxY)
+        canvasView.setContentOffset(CGPoint(x: canvasView.contentOffset.x, y: target), animated: true)
+    }
+
+    // MARK: PDF export
+
+    func exportPDF() {
+        guard let url = currentURL else { return }
+        let title = url.deletingPathExtension().lastPathComponent
+        session?.flash("PDF 만드는 중…", duration: 60)
+        Task {
+            do {
+                let fileURL = try await DocumentExporter.exportPDF(
+                    webView: renderer.webView,
+                    drawing: canvasView.drawing,
+                    pageWidth: pageWidth,
+                    contentHeight: contentHeight,
+                    title: title)
+                session?.status = nil
+                presentShareSheet(for: fileURL)
+            } catch {
+                session?.flash("PDF 내보내기에 실패했어요")
+            }
+        }
+    }
+
+    private func presentShareSheet(for url: URL) {
+        let controller = UIActivityViewController(activityItems: [url], applicationActivities: nil)
+        if let popover = controller.popoverPresentationController {
+            popover.sourceView = view
+            popover.sourceRect = CGRect(x: view.bounds.midX, y: view.safeAreaInsets.top + 8,
+                                        width: 1, height: 1)
+        }
+        present(controller, animated: true)
     }
 
     // MARK: Orphan tray
@@ -281,6 +512,11 @@ final class DocumentCanvasViewController: UIViewController {
 
     @objc private func appWillEnterForeground() { reloadIfChanged() }
 
+    @objc private func appDidEnterBackground() {
+        flushPendingSave()
+        persistViewState()
+    }
+
     /// Debounce rapid file-coordination notifications (an atomic save can fire
     /// several) before checking whether to reload.
     private func scheduleReloadCheck() {
@@ -303,11 +539,22 @@ final class DocumentCanvasViewController: UIViewController {
     private func scheduleSave() {
         saveWorkItem?.cancel()
         let work = DispatchWorkItem { [weak self] in
-            guard let self, let store = self.inkStore else { return }
-            store.save(blocks: self.currentBlocks, documentText: self.documentText)
+            guard let self else { return }
+            self.saveWorkItem = nil
+            self.inkStore?.save(blocks: self.currentBlocks, documentText: self.documentText)
         }
         saveWorkItem = work
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.8, execute: work)
+    }
+
+    /// Write any debounced-but-unsaved ink NOW. Called when leaving the screen
+    /// or backgrounding — otherwise strokes drawn in the last <0.8s would die
+    /// with the view controller.
+    private func flushPendingSave() {
+        guard saveWorkItem != nil else { return }
+        saveWorkItem?.cancel()
+        saveWorkItem = nil
+        inkStore?.save(blocks: currentBlocks, documentText: documentText)
     }
 }
 
@@ -319,6 +566,7 @@ extension DocumentCanvasViewController: PKCanvasViewDelegate {
         guard !isRestoring, let store = inkStore, !currentBlocks.isEmpty else { return }
         store.capture(drawing: canvasView.drawing, blocks: currentBlocks)
         scheduleSave()
+        refreshUndoState()
     }
 }
 

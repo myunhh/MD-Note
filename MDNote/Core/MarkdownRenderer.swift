@@ -2,6 +2,26 @@ import UIKit
 import WebKit
 import MDNoteCore
 
+/// A clickable link region in document coordinates, as reported by bridge.js.
+struct LinkRegion: Decodable {
+    let x: Double
+    let y: Double
+    let width: Double
+    let height: Double
+    let href: String
+
+    var rect: CGRect { CGRect(x: x, y: y, width: width, height: height) }
+}
+
+/// A heading in the document, for outline (TOC) navigation.
+struct OutlineItem: Decodable, Identifiable, Equatable {
+    let level: Int
+    let text: String
+    let y: Double
+
+    var id: Double { y }
+}
+
 /// Wraps a WKWebView that renders markdown via the bundled web assets and
 /// exposes the per-block geometry needed to anchor ink.
 @MainActor
@@ -10,6 +30,11 @@ final class MarkdownRenderer: NSObject {
     private var readyContinuation: CheckedContinuation<Void, Never>?
     private var didLoadAssets = false
     private let assetHandler = LocalAssetSchemeHandler()
+
+    /// Fired (on the main actor) when the web layer's geometry changed after
+    /// the initial measurement — e.g. an image or web font finished loading and
+    /// pushed content down. The owner should re-query height + blocks.
+    var onLayoutChanged: (() -> Void)?
 
     /// Total page width the web layer lays out at (must match theme.css / bridge.js):
     /// a 1080pt text column on the left + a blank right writing margin = 1390pt.
@@ -21,6 +46,7 @@ final class MarkdownRenderer: NSObject {
         config.setURLSchemeHandler(assetHandler, forURLScheme: "mdasset")
         webView = WKWebView(frame: .zero, configuration: config)
         super.init()
+        webView.configuration.userContentController.add(WeakScriptHandler(self), name: "layoutChanged")
         webView.navigationDelegate = self
         webView.scrollView.isScrollEnabled = false        // outer scroll view owns scrolling
         webView.scrollView.bounces = false
@@ -54,7 +80,7 @@ final class MarkdownRenderer: NSObject {
 
     /// Set the paper background style ("plain" / "ruled" / "grid" / "dots").
     func setPaper(_ style: String) async {
-        _ = try? await webView.evaluateJavaScript("MDNote.setPaper('\(style)')")
+        _ = try? await webView.evaluateJavaScript("MDNote.setPaper(\(Self.jsStringLiteral(style)))")
     }
 
     /// Folder that relative image paths in the document resolve against.
@@ -70,10 +96,24 @@ final class MarkdownRenderer: NSObject {
 
     /// Per-block geometry in document coordinates, after layout.
     func blocks() async -> [Block] {
-        let any = (try? await webView.evaluateJavaScript("JSON.stringify(MDNote.layout())")) ?? nil
-        guard let json = any as? String, let data = json.data(using: .utf8) else { return [] }
-        guard let dtos = try? JSONDecoder().decode([BlockGeometryDTO].self, from: data) else { return [] }
-        return dtos.map(\.block)
+        await decodeJSON("MDNote.layout()", as: [BlockGeometryDTO].self).map(\.block)
+    }
+
+    /// Clickable link regions in document coordinates.
+    func links() async -> [LinkRegion] {
+        await decodeJSON("MDNote.links()", as: [LinkRegion].self)
+    }
+
+    /// Document headings (h1–h3) for outline navigation.
+    func outline() async -> [OutlineItem] {
+        await decodeJSON("MDNote.outline()", as: [OutlineItem].self)
+    }
+
+    private func decodeJSON<T: Decodable>(_ expression: String, as type: [T].Type) async -> [T] {
+        let any = (try? await webView.evaluateJavaScript("JSON.stringify(\(expression))")) ?? nil
+        guard let json = any as? String, let data = json.data(using: .utf8),
+              let items = try? JSONDecoder().decode([T].self, from: data) else { return [] }
+        return items
     }
 
     /// Encode a Swift string as a safe JS string literal (handles quotes,
@@ -102,6 +142,27 @@ extension MarkdownRenderer: WKNavigationDelegate {
     }
 }
 
+extension MarkdownRenderer: WKScriptMessageHandler {
+    func userContentController(_ userContentController: WKUserContentController,
+                               didReceive message: WKScriptMessage) {
+        guard message.name == "layoutChanged" else { return }
+        onLayoutChanged?()
+    }
+}
+
+/// WKUserContentController retains its message handlers; this wrapper keeps the
+/// renderer weakly referenced so the handler doesn't create a retain cycle.
+private final class WeakScriptHandler: NSObject, WKScriptMessageHandler {
+    private weak var target: WKScriptMessageHandler?
+
+    init(_ target: WKScriptMessageHandler) { self.target = target }
+
+    func userContentController(_ userContentController: WKUserContentController,
+                               didReceive message: WKScriptMessage) {
+        target?.userContentController(userContentController, didReceive: message)
+    }
+}
+
 /// Serves a markdown document's local assets (images, etc.) from the document's
 /// own folder via a custom `mdasset://` scheme. We read the file in Swift and
 /// return the bytes, which sidesteps WKWebView's file-access scoping (the page
@@ -119,8 +180,11 @@ final class LocalAssetSchemeHandler: NSObject, WKURLSchemeHandler {
         relative = relative.removingPercentEncoding ?? relative
 
         let fileURL = base.appendingPathComponent(relative).standardizedFileURL
-        // Never let a path escape the document's folder.
-        guard fileURL.path.hasPrefix(base.standardizedFileURL.path),
+        // Never let a path escape the document's folder. Compare with a
+        // trailing separator so a sibling like "notes-private" can't pass a
+        // plain string-prefix check against base "notes".
+        let basePath = base.standardizedFileURL.path
+        guard fileURL.path == basePath || fileURL.path.hasPrefix(basePath + "/"),
               let data = try? Data(contentsOf: fileURL) else {
             task.didFailWithError(URLError(.fileDoesNotExist)); return
         }
