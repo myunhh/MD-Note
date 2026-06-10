@@ -30,6 +30,9 @@ targets:
         # and in Finder file sharing, so .md files + their image folders can be added.
         UIFileSharingEnabled: true
         LSSupportsOpeningDocumentsInPlace: true
+        # Paper stays paper: the document canvas is light-only, so opt the whole
+        # app out of dark mode instead of shipping a half-dark UI.
+        UIUserInterfaceStyle: Light
         UILaunchScreen: {}
         UIApplicationSceneManifest:
           UIApplicationSupportsMultipleScenes: true

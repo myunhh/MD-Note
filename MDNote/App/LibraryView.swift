@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 import UniformTypeIdentifiers
 
 /// A markdown document in the app's library.
@@ -30,6 +31,10 @@ final class LibraryStore: ObservableObject {
         FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
     }
 
+    /// Extensions shown in the library. Matches what the importer accepts so
+    /// imported plain-text/markdown-variant files don't silently vanish.
+    static let documentExtensions: Set<String> = ["md", "markdown", "mdown", "mkd", "txt"]
+
     func load(directory: URL) {
         self.directory = directory
         if directory == Self.documentsURL { SampleDocument.installIfNeeded() }
@@ -44,7 +49,7 @@ final class LibraryStore: ObservableObject {
             let isDir = (try? url.resourceValues(forKeys: [.isDirectoryKey]))?.isDirectory ?? false
             if isDir {
                 fs.append(LibraryFolder(url: url, name: url.lastPathComponent))
-            } else if url.pathExtension.lowercased() == "md" {
+            } else if Self.documentExtensions.contains(url.pathExtension.lowercased()) {
                 ds.append(makeDoc(url))
             }
         }
@@ -56,7 +61,8 @@ final class LibraryStore: ObservableObject {
 
     @discardableResult
     func createNote(named name: String) -> LibraryDoc? {
-        let base = sanitized(name).isEmpty ? "새 노트" : sanitized(name)
+        let cleaned = sanitizedNoteName(name)
+        let base = cleaned.isEmpty ? "새 노트" : cleaned
         let url = uniqueURL(directory.appendingPathComponent(base).appendingPathExtension("md"))
         let template = "# \(url.deletingPathExtension().lastPathComponent)\n\n"
         guard (try? template.write(to: url, atomically: true, encoding: .utf8)) != nil else { return nil }
@@ -72,11 +78,13 @@ final class LibraryStore: ObservableObject {
     }
 
     func rename(_ doc: LibraryDoc, to newName: String) {
-        let base = sanitized(newName)
+        let base = sanitizedNoteName(newName)
         guard !base.isEmpty, base != doc.name else { return }
         let dst = uniqueURL(doc.url.deletingLastPathComponent()
-            .appendingPathComponent(base).appendingPathExtension("md"))
-        try? FileManager.default.moveItem(at: doc.url, to: dst)
+            .appendingPathComponent(base).appendingPathExtension(doc.url.pathExtension))
+        // Move the sidecar only if the note itself moved — otherwise the ink
+        // would detach from a note that stayed in place.
+        guard (try? FileManager.default.moveItem(at: doc.url, to: dst)) != nil else { return }
         let oldSidecar = doc.url.appendingPathExtension("inknote")
         if FileManager.default.fileExists(atPath: oldSidecar.path) {
             try? FileManager.default.moveItem(at: oldSidecar, to: dst.appendingPathExtension("inknote"))
@@ -154,6 +162,16 @@ final class LibraryStore: ObservableObject {
             .replacingOccurrences(of: ":", with: "-")
     }
 
+    /// Note names additionally drop a typed markdown extension, so entering
+    /// "Foo.md" doesn't produce "Foo.md.md".
+    private func sanitizedNoteName(_ name: String) -> String {
+        var s = sanitized(name)
+        for ext in ["md", "markdown"] where s.lowercased().hasSuffix("." + ext) {
+            s = String(s.dropLast(ext.count + 1))
+        }
+        return s.trimmingCharacters(in: .whitespaces)
+    }
+
     private func uniqueURL(_ url: URL, isDirectory: Bool = false) -> URL {
         guard FileManager.default.fileExists(atPath: url.path) else { return url }
         let dir = url.deletingLastPathComponent()
@@ -172,13 +190,19 @@ final class LibraryStore: ObservableObject {
 }
 
 /// Bundled sample copied into Documents on first launch so it's writable.
+/// Installed exactly once — deleting the sample must not resurrect it.
 enum SampleDocument {
+    private static let installedKey = "didInstallSampleDocument"
+
     @discardableResult
     static func installIfNeeded() -> URL? {
         guard let bundled = Bundle.main.url(forResource: "Sample", withExtension: "md") else { return nil }
         let dest = LibraryStore.documentsURL.appendingPathComponent("Sample.md")
-        if !FileManager.default.fileExists(atPath: dest.path) {
-            try? FileManager.default.copyItem(at: bundled, to: dest)
+        if !UserDefaults.standard.bool(forKey: installedKey) {
+            if !FileManager.default.fileExists(atPath: dest.path) {
+                try? FileManager.default.copyItem(at: bundled, to: dest)
+            }
+            UserDefaults.standard.set(true, forKey: installedKey)
         }
         return dest
     }
@@ -196,9 +220,30 @@ struct LibraryView: View {
     @State private var promptPlaceholder = ""
     @State private var promptText = ""
     @State private var promptAction: (String) -> Void = { _ in }
+    @State private var searchText = ""
+    @AppStorage("librarySort") private var sortOrder = "modified"
 
     private let columns = [GridItem(.adaptive(minimum: 165, maximum: 220), spacing: 22)]
     private var isRoot: Bool { directory.standardizedFileURL == LibraryStore.documentsURL.standardizedFileURL }
+
+    private var visibleFolders: [LibraryFolder] {
+        guard !searchText.isEmpty else { return store.folders }
+        return store.folders.filter { $0.name.localizedCaseInsensitiveContains(searchText) }
+    }
+
+    private var visibleDocuments: [LibraryDoc] {
+        var docs = store.documents
+        if !searchText.isEmpty {
+            docs = docs.filter {
+                $0.name.localizedCaseInsensitiveContains(searchText)
+                    || $0.preview.localizedCaseInsensitiveContains(searchText)
+            }
+        }
+        if sortOrder == "name" {
+            docs.sort { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
+        }
+        return docs
+    }
 
     var body: some View {
         ScrollView {
@@ -209,9 +254,12 @@ struct LibraryView: View {
                     description: Text("우측 상단 ＋로 노트·폴더를 만들거나 파일을 가져오세요.")
                 )
                 .padding(.top, 80)
+            } else if visibleFolders.isEmpty && visibleDocuments.isEmpty {
+                ContentUnavailableView.search(text: searchText)
+                    .padding(.top, 80)
             } else {
                 LazyVGrid(columns: columns, spacing: 24) {
-                    ForEach(store.folders) { folder in
+                    ForEach(visibleFolders) { folder in
                         NavigationLink(value: folder) { FolderCard(folder: folder) }
                             .buttonStyle(.plain)
                             .contextMenu {
@@ -219,7 +267,7 @@ struct LibraryView: View {
                                 Button(role: .destructive) { store.delete(folder) } label: { Label("삭제", systemImage: "trash") }
                             }
                     }
-                    ForEach(store.documents) { doc in
+                    ForEach(visibleDocuments) { doc in
                         NavigationLink(value: doc) { DocumentCard(doc: doc) }
                             .buttonStyle(.plain)
                             .contextMenu {
@@ -234,7 +282,19 @@ struct LibraryView: View {
         .background(Color(.systemGroupedBackground))
         .navigationTitle(isRoot ? "내 문서" : directory.lastPathComponent)
         .navigationBarTitleDisplayMode(isRoot ? .large : .inline)
+        .searchable(text: $searchText, prompt: "노트 검색")
         .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                Menu {
+                    Picker("정렬", selection: $sortOrder) {
+                        Label("최근 수정순", systemImage: "clock").tag("modified")
+                        Label("이름순", systemImage: "textformat").tag("name")
+                    }
+                } label: {
+                    Image(systemName: "arrow.up.arrow.down")
+                }
+                .accessibilityLabel("정렬")
+            }
             ToolbarItem(placement: .topBarTrailing) {
                 Menu {
                     Button { askNewNote() } label: { Label("새 노트", systemImage: "doc.badge.plus") }
@@ -245,6 +305,7 @@ struct LibraryView: View {
                 } label: {
                     Image(systemName: "plus")
                 }
+                .accessibilityLabel("추가")
             }
         }
         .alert(promptTitle, isPresented: $showPrompt) {
@@ -260,6 +321,10 @@ struct LibraryView: View {
             else { urls.forEach(store.importFile) }
         }
         .onAppear { store.load(directory: directory) }
+        .onReceive(NotificationCenter.default.publisher(
+            for: UIApplication.willEnterForegroundNotification)) { _ in
+            store.load(directory: directory)
+        }
     }
 
     // MARK: Prompts
