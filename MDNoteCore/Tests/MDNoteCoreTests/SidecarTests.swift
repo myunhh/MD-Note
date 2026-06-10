@@ -40,4 +40,15 @@ final class SidecarTests: XCTestCase {
             Hashing.blockHash("The quick brown foxes")
         )
     }
+
+    func testNormalizeMatchesJSSemantics() {
+        // bridge.js: text.split(/[ \t\n\r]+/).filter(Boolean).join(" ").
+        // ASCII whitespace collapses (including at the edges)…
+        XCTAssertEqual(Hashing.normalize("  a \t b\r\nc  "), "a b c")
+        // …but Unicode spaces are CONTENT on both sides (NBSP here), so the
+        // Swift side must not trim them away.
+        XCTAssertEqual(Hashing.normalize("\u{00A0}a b\u{00A0}"), "\u{00A0}a b\u{00A0}")
+        XCTAssertEqual(Hashing.normalize(""), "")
+        XCTAssertEqual(Hashing.normalize(" \n\t "), "")
+    }
 }

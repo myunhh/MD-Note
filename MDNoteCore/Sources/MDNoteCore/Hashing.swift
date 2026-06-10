@@ -18,12 +18,28 @@ public enum Hashing {
         return String(hash, radix: 16)
     }
 
-    /// Collapse all whitespace runs to a single space and trim. This makes the
+    /// Collapse all ASCII-whitespace runs to a single space. This makes the
     /// hash insensitive to source re-wrapping while staying sensitive to the
     /// actual visible content of a block.
+    ///
+    /// Must stay byte-for-byte identical to `normalize` in bridge.js, which
+    /// splits on ASCII whitespace only — so Unicode spaces (NBSP etc.) count as
+    /// content, not separators, on both sides. Splitting works on Unicode
+    /// scalars, not Characters: as a Character, "\r\n" is ONE grapheme that a
+    /// Character-level split would fail to treat as whitespace.
     public static func normalize(_ text: String) -> String {
-        let parts = text.split(whereSeparator: { $0 == " " || $0 == "\t" || $0 == "\n" || $0 == "\r" })
-        return parts.joined(separator: " ").trimmingCharacters(in: .whitespacesAndNewlines)
+        var parts: [String] = []
+        var current = ""
+        for scalar in text.unicodeScalars {
+            switch scalar {
+            case " ", "\t", "\n", "\r":
+                if !current.isEmpty { parts.append(current); current = "" }
+            default:
+                current.unicodeScalars.append(scalar)
+            }
+        }
+        if !current.isEmpty { parts.append(current) }
+        return parts.joined(separator: " ")
     }
 
     /// Stable content hash for a markdown block.

@@ -32,10 +32,29 @@ public enum Reanchor {
         // Map a surviving old block identity -> its new identity.
         // Key: "hash#seq" of the OLD block. Value: the matched NEW block.
         var survivors: [String: Block] = [:]
+        var matchedOld = Set<Int>()
+        var matchedNew = Set<Int>()
         for pair in pairs {
             let oldB = oldBlocks[pair.oldIndex]
             let newB = newBlocks[pair.newIndex]
             survivors[key(oldB.hash, oldB.seq)] = newB
+            matchedOld.insert(pair.oldIndex)
+            matchedNew.insert(pair.newIndex)
+        }
+
+        // Second pass: a block MOVED elsewhere in the document falls off the
+        // LCS (which only matches in-order subsequences) even though identical
+        // content survives. Pair the leftover old/new blocks that share a hash,
+        // in document order, so ink follows a relocated section instead of
+        // orphaning.
+        var movedTargets: [String: [Int]] = [:]
+        for (index, block) in newBlocks.enumerated() where !matchedNew.contains(index) {
+            movedTargets[block.hash, default: []].append(index)
+        }
+        for (index, oldB) in oldBlocks.enumerated() where !matchedOld.contains(index) {
+            guard var targets = movedTargets[oldB.hash], !targets.isEmpty else { continue }
+            survivors[key(oldB.hash, oldB.seq)] = newBlocks[targets.removeFirst()]
+            movedTargets[oldB.hash] = targets
         }
 
         var result = Result()
