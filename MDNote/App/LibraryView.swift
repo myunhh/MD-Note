@@ -31,6 +31,16 @@ final class LibraryStore: ObservableObject {
         FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
     }
 
+    /// UserDefaults key for a document's saved scroll/zoom. Keyed relative to
+    /// the library root — the absolute container path changes across
+    /// reinstall/restore, which would orphan every saved position.
+    nonisolated static func viewStateKey(for url: URL) -> String {
+        let root = documentsURL.standardizedFileURL.path
+        var path = url.standardizedFileURL.path
+        if path.hasPrefix(root + "/") { path = String(path.dropFirst(root.count)) }
+        return "docViewState:\(path)"
+    }
+
     /// Extensions shown in the library. Matches what the importer accepts so
     /// imported plain-text/markdown-variant files don't silently vanish.
     static let documentExtensions: Set<String> = ["md", "markdown", "mdown", "mkd", "txt"]
@@ -104,6 +114,7 @@ final class LibraryStore: ObservableObject {
     func delete(_ doc: LibraryDoc) {
         try? FileManager.default.removeItem(at: doc.url)
         try? FileManager.default.removeItem(at: doc.url.appendingPathExtension("inknote"))
+        UserDefaults.standard.removeObject(forKey: Self.viewStateKey(for: doc.url))
         load(directory: directory)
     }
 
@@ -162,12 +173,13 @@ final class LibraryStore: ObservableObject {
             .replacingOccurrences(of: ":", with: "-")
     }
 
-    /// Note names additionally drop a typed markdown extension, so entering
-    /// "Foo.md" doesn't produce "Foo.md.md".
+    /// Note names additionally drop a typed document extension, so entering
+    /// "Foo.md" (or renaming "note.txt" to "memo.txt") doesn't double-extend.
     private func sanitizedNoteName(_ name: String) -> String {
         var s = sanitized(name)
-        for ext in ["md", "markdown"] where s.lowercased().hasSuffix("." + ext) {
+        for ext in Self.documentExtensions where s.lowercased().hasSuffix("." + ext) {
             s = String(s.dropLast(ext.count + 1))
+            break
         }
         return s.trimmingCharacters(in: .whitespaces)
     }
@@ -199,12 +211,25 @@ enum SampleDocument {
         guard let bundled = Bundle.main.url(forResource: "Sample", withExtension: "md") else { return nil }
         let dest = LibraryStore.documentsURL.appendingPathComponent("Sample.md")
         if !UserDefaults.standard.bool(forKey: installedKey) {
-            if !FileManager.default.fileExists(atPath: dest.path) {
+            // Only seed a genuinely fresh library. A user updating from a
+            // build without the flag may have deleted the sample already —
+            // existing content means this isn't a first launch.
+            if libraryIsEmpty(), !FileManager.default.fileExists(atPath: dest.path) {
                 try? FileManager.default.copyItem(at: bundled, to: dest)
             }
             UserDefaults.standard.set(true, forKey: installedKey)
         }
         return dest
+    }
+
+    private static func libraryIsEmpty() -> Bool {
+        let entries = (try? FileManager.default.contentsOfDirectory(
+            at: LibraryStore.documentsURL, includingPropertiesForKeys: [.isDirectoryKey],
+            options: [.skipsHiddenFiles])) ?? []
+        return !entries.contains { url in
+            let isDir = (try? url.resourceValues(forKeys: [.isDirectoryKey]))?.isDirectory ?? false
+            return isDir || LibraryStore.documentExtensions.contains(url.pathExtension.lowercased())
+        }
     }
 }
 

@@ -51,6 +51,12 @@ final class DocumentCanvasViewController: UIViewController {
     private var stateWorkItem: DispatchWorkItem?
     private var fileWatcher: FileWatcher?
     private var reloadWorkItem: DispatchWorkItem?
+    private var isLoadingDocument = false
+    private var didInitialLoad = false
+    private var renderRetryCount = 0
+    /// Saved scroll fraction still being honored — cleared once the user
+    /// scrolls, so late image loads can correct the restored position.
+    private var pendingRestoreFracY: Double?
 
     // MARK: Lifecycle
 
@@ -91,8 +97,10 @@ final class DocumentCanvasViewController: UIViewController {
         }
         offsetObservation = canvasView.observe(\.contentOffset, options: [.new]) { [weak self] _, _ in
             MainActor.assumeIsolated {
-                self?.syncWeb()
-                self?.scheduleViewStatePersist()
+                guard let self else { return }
+                if self.canvasView.isTracking { self.pendingRestoreFracY = nil }
+                self.syncWeb()
+                self.scheduleViewStatePersist()
             }
         }
 
@@ -147,6 +155,9 @@ final class DocumentCanvasViewController: UIViewController {
         inkStore = InkStore(documentURL: url)
         didInitialZoom = false
         didRestoreViewState = false
+        didInitialLoad = false
+        renderRetryCount = 0
+        pendingRestoreFracY = nil
         fileWatcher?.stop()
         fileWatcher = FileWatcher(
             url: url,
@@ -169,6 +180,9 @@ final class DocumentCanvasViewController: UIViewController {
 
     private func loadAndRender(initial: Bool) async {
         guard let url = currentURL, let store = inkStore else { return }
+        isLoadingDocument = true
+        defer { isLoadingDocument = false }
+
         let text = (try? String(contentsOf: url, encoding: .utf8)) ?? "# 파일을 읽을 수 없습니다\n"
         let newHash = Hashing.documentHash(text)
 
@@ -181,22 +195,38 @@ final class DocumentCanvasViewController: UIViewController {
 
         // A non-empty document that yields zero blocks means the web bridge
         // failed, not that every block vanished — bail out rather than
-        // orphaning all ink and blanking the canvas. (lastDocHash stays stale,
-        // so the next change notification retries.)
+        // orphaning all ink and blanking the canvas. lastDocHash stays stale,
+        // so the retry (and any later change notification) re-runs the load.
         if newBlocks.isEmpty,
            !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            if renderRetryCount < 2 {
+                renderRetryCount += 1
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) { [weak self] in
+                    self?.reloadIfChanged()
+                }
+            }
             return
         }
+        renderRetryCount = 0
 
         documentText = text
         applyContentSize(height)
 
         if initial {
             store.adoptStrandedSidecarIfNeeded(documentText: text)
-            if let sidecar = store.load(), sidecar.documentHash != newHash {
-                let result = store.applyExternalEdit(
-                    oldBlocks: sidecar.blocks.map(\.block), newBlocks: newBlocks)
-                reportReanchor(result)
+            if let sidecar = store.load() {
+                // Ink saved under an older hashing scheme re-keys in place
+                // first; anything still unresolved goes through a re-anchor so
+                // it lands in the orphan tray instead of becoming invisible.
+                store.migrateLegacyAnchors(to: newBlocks)
+                let unresolved = store.ink.contains {
+                    newBlocks.block(hash: $0.blockHash, seq: $0.blockSeq) == nil
+                }
+                if sidecar.documentHash != newHash || unresolved {
+                    let result = store.applyExternalEdit(
+                        oldBlocks: sidecar.blocks.map(\.block), newBlocks: newBlocks)
+                    reportReanchor(result)
+                }
             }
         } else {
             let result = store.applyExternalEdit(oldBlocks: currentBlocks, newBlocks: newBlocks)
@@ -205,6 +235,7 @@ final class DocumentCanvasViewController: UIViewController {
 
         currentBlocks = newBlocks
         lastDocHash = newHash
+        didInitialLoad = true
 
         isRestoring = true
         canvasView.drawing = store.rebuildDrawing(blocks: newBlocks)
@@ -223,15 +254,48 @@ final class DocumentCanvasViewController: UIViewController {
     /// loading). Block identities are unchanged — only frames move — so the
     /// stored block-relative ink re-renders at the right spots.
     private func remeasureLayout() async {
-        guard let store = inkStore, !currentBlocks.isEmpty else { return }
+        // loadAndRender refreshes geometry itself — interleaving here would
+        // overwrite currentBlocks and corrupt its re-anchor baseline.
+        guard !isLoadingDocument, let store = inkStore, !currentBlocks.isEmpty else { return }
+
+        // Replacing canvasView.drawing cancels an in-progress stroke — wait
+        // for the pen to lift.
+        let gesture = canvasView.drawingGestureRecognizer.state
+        if gesture == .began || gesture == .changed {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) { [weak self] in
+                guard let self else { return }
+                Task { await self.remeasureLayout() }
+            }
+            return
+        }
+
         let height = await renderer.contentHeight()
         let newBlocks = await renderer.blocks()
-        guard !newBlocks.isEmpty else { return }
+        guard !newBlocks.isEmpty, !isLoadingDocument else { return }
+
+        // A font load with no reflow fires the notification too — skip the
+        // drawing rebuild when nothing actually moved.
+        let unchanged = height == contentHeight
+            && newBlocks.count == currentBlocks.count
+            && zip(newBlocks, currentBlocks).allSatisfy { $0.frame == $1.frame }
+        if unchanged { return }
+
         applyContentSize(height)
         currentBlocks = newBlocks
         isRestoring = true
         canvasView.drawing = store.rebuildDrawing(blocks: newBlocks)
         isRestoring = false
+        refreshUndoState()
+
+        // If the user hasn't scrolled since the saved position was restored,
+        // re-apply it against the corrected content height.
+        if let frac = pendingRestoreFracY {
+            let z = canvasView.zoomScale
+            let minY = -canvasView.adjustedContentInset.top
+            let maxY = max(minY, contentHeight * z - canvasView.bounds.height
+                           + canvasView.adjustedContentInset.bottom)
+            canvasView.contentOffset.y = min(max(CGFloat(frac) * contentHeight * z, minY), maxY)
+        }
         await refreshNavigationAids()
     }
 
@@ -265,14 +329,13 @@ final class DocumentCanvasViewController: UIViewController {
 
     // MARK: Per-document view state (zoom + scroll position)
 
-    private static func viewStateKey(_ url: URL) -> String { "docViewState:\(url.path)" }
-
     /// Restore the last zoom/scroll for this document. The vertical position is
     /// stored as a fraction of the content height, so it still lands near the
     /// right spot after external edits changed the document's length.
     private func restoreViewState() {
         guard let url = currentURL else { return }
-        guard let state = UserDefaults.standard.dictionary(forKey: Self.viewStateKey(url)) as? [String: Double],
+        let key = LibraryStore.viewStateKey(for: url)
+        guard let state = UserDefaults.standard.dictionary(forKey: key) as? [String: Double],
               let zoom = state["zoom"], let fracY = state["fracY"] else {
             canvasView.zoomScale = canvasView.minimumZoomScale
             return
@@ -285,6 +348,7 @@ final class DocumentCanvasViewController: UIViewController {
         canvasView.contentOffset = CGPoint(
             x: min(max(CGFloat(state["x"] ?? 0), 0), maxX),
             y: min(max(CGFloat(fracY) * contentHeight * z, minY), maxY))
+        pendingRestoreFracY = fracY
     }
 
     private func scheduleViewStatePersist() {
@@ -304,7 +368,7 @@ final class DocumentCanvasViewController: UIViewController {
             "fracY": Double(canvasView.contentOffset.y / max(contentHeight * canvasView.zoomScale, 1)),
             "x": Double(canvasView.contentOffset.x),
         ]
-        UserDefaults.standard.set(state, forKey: Self.viewStateKey(url))
+        UserDefaults.standard.set(state, forKey: LibraryStore.viewStateKey(for: url))
     }
 
     /// PencilKit may shrink the scroll content toward the drawing's bounds, which
@@ -429,6 +493,7 @@ final class DocumentCanvasViewController: UIViewController {
     /// Scroll so the given document-coordinate y (e.g. an outline heading)
     /// sits near the top of the viewport.
     func scroll(toDocumentY y: Double) {
+        pendingRestoreFracY = nil
         let z = canvasView.zoomScale
         let minY = -canvasView.adjustedContentInset.top
         let maxY = max(minY, canvasView.contentSize.height - canvasView.bounds.height
@@ -530,7 +595,11 @@ final class DocumentCanvasViewController: UIViewController {
         guard let url = currentURL,
               let text = try? String(contentsOf: url, encoding: .utf8) else { return }
         if Hashing.documentHash(text) != lastDocHash {
-            Task { await loadAndRender(initial: false) }
+            // If the very first load never completed (e.g. bridge failure),
+            // run the initial path again — the non-initial path assumes the
+            // sidecar was already loaded and would save empty ink over it.
+            let initial = !didInitialLoad
+            Task { await loadAndRender(initial: initial) }
         }
     }
 
@@ -564,6 +633,7 @@ extension DocumentCanvasViewController: PKCanvasViewDelegate {
     func canvasViewDrawingDidChange(_ canvasView: PKCanvasView) {
         enforceContentSize()
         guard !isRestoring, let store = inkStore, !currentBlocks.isEmpty else { return }
+        pendingRestoreFracY = nil   // the user is writing here — don't yank the view
         store.capture(drawing: canvasView.drawing, blocks: currentBlocks)
         scheduleSave()
         refreshUndoState()

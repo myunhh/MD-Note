@@ -214,15 +214,16 @@
   }
 
   // Clickable link regions in document coordinates. One entry per client rect
-  // (a wrapped link spans several). In-page anchors are skipped — markdown-it
-  // doesn't generate heading ids, so they'd go nowhere.
+  // (a wrapped link spans several). Only links the native side can actually
+  // open are reported: in-page anchors have no heading ids to land on, and
+  // relative paths have no handler (yet).
   function links() {
     var sx = window.scrollX || 0;
     var sy = window.scrollY || 0;
     var out = [];
     document.querySelectorAll("#content a[href]").forEach(function (a) {
       var href = a.getAttribute("href") || "";
-      if (!href || href.charAt(0) === "#") return;
+      if (!/^(https?:|mailto:)/i.test(href)) return;
       Array.prototype.forEach.call(a.getClientRects(), function (r) {
         if (r.width === 0 || r.height === 0) return;
         out.push({ x: r.left + sx, y: r.top + sy, width: r.width, height: r.height, href: href });

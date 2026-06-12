@@ -185,7 +185,9 @@ final class InkStore {
     /// rename (`Old.md.inknote` left behind after `Old.md` -> `New.md` in the
     /// Files app): a sibling whose own markdown file is gone and whose stored
     /// documentHash matches this document's exact text. Conservative on
-    /// purpose — a rename + edit won't match and the stranded file stays put.
+    /// purpose — a rename + edit won't match, and if another document in the
+    /// folder has identical content the ink could belong to it instead, so
+    /// the stranded file stays put in both cases.
     func adoptStrandedSidecarIfNeeded(documentText: String) {
         let fm = FileManager.default
         guard !fm.fileExists(atPath: sidecarURL.path) else { return }
@@ -193,6 +195,14 @@ final class InkStore {
         guard let entries = try? fm.contentsOfDirectory(
             at: directory, includingPropertiesForKeys: nil, options: [.skipsHiddenFiles]) else { return }
         let docHash = Hashing.documentHash(documentText)
+
+        let ambiguous = entries.contains { sibling in
+            sibling.standardizedFileURL != documentURL.standardizedFileURL
+                && LibraryStore.documentExtensions.contains(sibling.pathExtension.lowercased())
+                && (try? String(contentsOf: sibling, encoding: .utf8)).map(Hashing.documentHash) == docHash
+        }
+        if ambiguous { return }
+
         for url in entries where url.pathExtension == "inknote" {
             let owner = url.deletingPathExtension()
             guard !fm.fileExists(atPath: owner.path),
@@ -201,6 +211,30 @@ final class InkStore {
                   sidecar.documentHash == docHash else { continue }
             try? fm.moveItem(at: url, to: sidecarURL)
             return
+        }
+    }
+
+    /// Re-key ink saved under an older block-hashing scheme. Hash inputs have
+    /// evolved (image alt/src now feed the identity), but `Block.text` still
+    /// carries the raw textContent — whose hash IS the legacy identity. Any
+    /// ink that doesn't resolve against current identities but matches a
+    /// block's legacy hash+seq is re-keyed in place, so it stays exactly
+    /// where the user drew it.
+    func migrateLegacyAnchors(to blocks: [Block]) {
+        let currentKeys = Set(blocks.map(Self.key))
+        var legacyIdentity: [String: Block] = [:]
+        var counts: [String: Int] = [:]
+        for block in blocks {
+            let legacyHash = Hashing.blockHash(block.text ?? "")
+            let seq = counts[legacyHash, default: 0]
+            counts[legacyHash] = seq + 1
+            legacyIdentity["\(legacyHash)#\(seq)"] = block
+        }
+        for index in ink.indices {
+            let key = "\(ink[index].blockHash)#\(ink[index].blockSeq)"
+            guard !currentKeys.contains(key), let target = legacyIdentity[key] else { continue }
+            ink[index].blockHash = target.hash
+            ink[index].blockSeq = target.seq
         }
     }
 
