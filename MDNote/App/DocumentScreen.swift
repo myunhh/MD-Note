@@ -7,6 +7,7 @@ struct DocumentScreen: View {
     @StateObject private var session = DocumentSession()
     @State private var showTray = false
     @State private var showOutline = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         DocumentCanvasView(url: doc.url, session: session)
@@ -42,7 +43,7 @@ struct DocumentScreen: View {
                     Button { showTray = true } label: {
                         Image(systemName: "tray")
                     }
-                    .accessibilityLabel("보관함")
+                    .accessibilityLabel(session.orphanCount > 0 ? "보관함, \(session.orphanCount)개" : "보관함")
                     .overlay(alignment: .topTrailing) {
                         if session.orphanCount > 0 {
                             Text("\(session.orphanCount)")
@@ -51,6 +52,7 @@ struct DocumentScreen: View {
                                 .padding(3)
                                 .background(Color.red, in: Circle())
                                 .offset(x: 8, y: -8)
+                                .accessibilityHidden(true)
                         }
                     }
                     Menu {
@@ -63,6 +65,15 @@ struct DocumentScreen: View {
                             Text("모눈").tag("grid")
                             Text("점").tag("dots")
                         }
+                        Picker("글자 크기", selection: Binding(
+                            get: { session.textScale },
+                            set: { session.setTextScale($0) }
+                        )) {
+                            Text("작게").tag(0.85)
+                            Text("보통").tag(1.0)
+                            Text("크게").tag(1.2)
+                            Text("아주 크게").tag(1.4)
+                        }
                         Divider()
                         Toggle(isOn: Binding(
                             get: { session.fingerDrawing },
@@ -71,8 +82,17 @@ struct DocumentScreen: View {
                             Label("손가락으로 그리기", systemImage: "hand.draw")
                         }
                         Divider()
+                        Button { session.shareSource() } label: {
+                            Label("노트 공유 (.md + 필기)", systemImage: "square.and.arrow.up.on.square")
+                        }
                         Button { session.exportPDF() } label: {
-                            Label("PDF로 내보내기", systemImage: "square.and.arrow.up")
+                            Label("PDF로 내보내기", systemImage: "arrow.down.doc")
+                        }
+                        if let s = session.docStats {
+                            Section {
+                                Label("\(s.words.formatted()) 단어 · 약 \(s.minutes)분",
+                                      systemImage: "textformat.size")
+                            }
                         }
                     } label: {
                         Image(systemName: "ellipsis.circle")
@@ -81,20 +101,37 @@ struct DocumentScreen: View {
                 }
             }
             .overlay(alignment: .top) {
-                if let status = session.status {
-                    Text(status)
-                        .font(.footnote)
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 7)
-                        .background(.ultraThinMaterial, in: Capsule())
-                        .padding(.top, 8)
-                        .transition(.move(edge: .top).combined(with: .opacity))
+                if let toast = session.toast {
+                    HStack(spacing: 7) {
+                        toastIcon(toast.kind)
+                        Text(toast.text).font(.footnote)
+                    }
+                    .padding(.horizontal, 13)
+                    .padding(.vertical, 8)
+                    .background(.ultraThinMaterial, in: Capsule())
+                    .overlay(Capsule().strokeBorder(.black.opacity(0.06)))
+                    .shadow(color: .black.opacity(0.08), radius: 6, y: 2)
+                    .padding(.top, 8)
+                    .transition(reduceMotion ? .opacity : .move(edge: .top).combined(with: .opacity))
                 }
             }
-            .animation(.default, value: session.status)
+            .animation(reduceMotion ? nil : .spring(response: 0.4, dampingFraction: 0.85), value: session.toast)
+            .sensoryFeedback(.selection, trigger: session.selectionTick)
+            .sensoryFeedback(.success, trigger: session.successTick)
+            .sensoryFeedback(.impact(weight: .light), trigger: session.impactTick)
             .sheet(isPresented: $showTray) {
                 OrphanTrayView(session: session)
             }
+    }
+
+    @ViewBuilder
+    private func toastIcon(_ kind: ToastKind) -> some View {
+        switch kind {
+        case .progress: ProgressView().controlSize(.small)
+        case .success:  Image(systemName: "checkmark.circle.fill").foregroundStyle(.green)
+        case .error:    Image(systemName: "exclamationmark.triangle.fill").foregroundStyle(.red)
+        case .info:     Image(systemName: "sparkles").foregroundStyle(.tint)
+        }
     }
 }
 
@@ -115,6 +152,8 @@ struct OutlineList: View {
                     .padding(.leading, CGFloat(item.level - 1) * 16)
                     .lineLimit(1)
             }
+            .accessibilityAddTraits(.isHeader)
+            .accessibilityLabel("\(item.text), 제목 수준 \(item.level)")
         }
         .listStyle(.plain)
         .frame(minWidth: 280, minHeight: 60, maxHeight: 420)

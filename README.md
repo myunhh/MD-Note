@@ -28,19 +28,23 @@ MD는 앱 밖(VSCode 등)에서 편집하고, 앱은 **보기 + 필기 전용**�
 1. **스크롤러는 단 하나** — WKWebView·PKCanvasView를 동기화하지 않고, 바깥 UIScrollView 하나만 스크롤/줌. 안쪽 두 레이어는 문서 전체 높이로 펼쳐 한 덩어리로 움직임. 펜=그리기/손가락=스크롤 (설정으로 손가락 그리기 가능).
 2. **필기를 좌표가 아닌 MD 블록에 앵커** — 글이 밀려도 블록을 따라 필기가 이동. 섹션을 통째로 옮겨도 따라감(LCS + 이동 블록 2차 매칭). 블록이 사라지면 보관함(orphan)으로 (자동 삭제 없음).
 
-잉크를 지키는 안전장치: 화면 이탈/백그라운드 시 즉시 저장, 외부 이름변경 추적(NSFilePresenter) + 좌초된 sidecar 해시 입양, 손상된 sidecar 백업(.corrupt), 이미지/폰트 늦은 로드 시 지오메트리 재측정.
+잉크를 지키는 안전장치: 화면 이탈/백그라운드 시 즉시 저장(실패 시 사용자 경고), 동시 로드 직렬화로 베이스라인 경쟁 차단, 외부 이름변경 추적(NSFilePresenter) + 좌초된 sidecar 해시 입양, 더 최신 버전이 쓴 sidecar는 덮어쓰지 않음(읽기 전용 전환), 손상된 sidecar는 타임스탬프로 보존 백업(`.corrupt-*`), 비유한 좌표 클램프, 이미지/폰트 늦은 로드 시 지오메트리 재측정. JS↔Swift 블록 해시 동일성은 골든 픽스처 + Node 교차검증으로 잠가둠.
 
-그 외: 제목 아웃라인 내비게이션, 링크 탭 열기, 문서별 스크롤/줌 복원, 잉크 합성 PDF 내보내기, 라이브러리 검색·정렬, KaTeX 수식, 코드 하이라이트, 종이 배경 4종.
+그 외: GitHub/Notion 스타일 콜아웃(`> [!NOTE]`), YAML 프런트매터 자동 숨김, 글자 크기 조절 · 문서별 종이 배경(4종) · 스크롤/줌 복원, 제목 아웃라인 내비게이션, 링크 탭 열기(Pencil 전용 모드 — 손가락 그리기 켜면 비활성), Apple Pencil 더블탭 지우개, 노트 공유(.md+필기 zip) · 잉크 합성 PDF 내보내기(긴 문서 다중 페이지, 깨끗한 종이), 라이브러리 전문 검색 · 정렬, VoiceOver 본문 읽기, KaTeX 수식, 코드 하이라이트(언어 배지), 앱 아이콘 · 테라코타 액센트, 햅틱 피드백.
 
 ## 빌드 / 테스트
+
+> 필요: `xcodegen` (`brew install xcodegen`) — `.xcodeproj`와 생성된 Info.plist는 `.gitignore` 대상이라 필수다.
 
 ```bash
 # 핵심 로직 테스트 (macOS, 시뮬레이터 불필요)
 cd MDNoteCore && swift test
+# JS↔Swift 블록 해시 동일성 교차검증 (Node, 불변식 #3)
+node MDNoteCore/Tests/parity/hash_parity.mjs
 
-# iOS 앱 프로젝트 생성 + 컴파일
+# iOS 앱 프로젝트 생성 + 컴파일 (SDK는 destination이 자동 해석)
 xcodegen generate            # project.yml → MDNote.xcodeproj
-xcodebuild build -scheme MDNote -sdk iphonesimulator26.5 \
+xcodebuild build -scheme MDNote \
   -destination 'generic/platform=iOS Simulator'
 ```
 

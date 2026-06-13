@@ -16,6 +16,15 @@ final class InkStore {
     private(set) var orphans: [AnchoredInk] = []
     var layoutWidth: CGFloat = 1390
 
+    /// Set when load() found a sidecar written by a NEWER app version. Its bytes
+    /// are intact, so we refuse to overwrite it — every save() becomes a no-op
+    /// rather than clobbering the user's ink with this build's older schema.
+    private(set) var isReadOnly = false
+
+    /// Surfaced when a save fails (encode/coordination/write) so the UI can warn
+    /// the user instead of silently losing the last strokes.
+    var onSaveFailure: ((Error) -> Void)?
+
     /// `Foo.md` -> `Foo.md.inknote`
     var sidecarURL: URL { documentURL.appendingPathExtension("inknote") }
 
@@ -37,25 +46,24 @@ final class InkStore {
     /// Re-derive per-block ink groups from the full live drawing.
     func capture(drawing: PKDrawing, blocks: [Block]) {
         guard !blocks.isEmpty else { return }
+        let byKey = Dictionary(blocks.map { (Self.key($0), $0) }, uniquingKeysWith: { a, _ in a })
         var grouped: [String: [PKStroke]] = [:]
         for stroke in drawing.strokes {
-            let b = stroke.renderBounds
-            let anchorPoint = CGPoint(x: b.midX, y: b.minY)
-            guard let block = Self.nearestBlock(to: anchorPoint, in: blocks) else { continue }
+            guard let block = Self.anchorBlock(for: stroke.renderBounds, in: blocks) else { continue }
             grouped[Self.key(block), default: []].append(stroke)
         }
 
         var items: [AnchoredInk] = []
         for (key, strokes) in grouped {
-            guard let block = blocks.first(where: { Self.key($0) == key }) else { continue }
+            guard let block = byKey[key] else { continue }
             let origin = block.frame.origin
             let relative = PKDrawing(strokes: strokes)
                 .transformed(using: CGAffineTransform(translationX: -origin.x, y: -origin.y))
             items.append(AnchoredInk(
                 blockHash: block.hash,
                 blockSeq: block.seq,
-                offset: relative.bounds.origin,
-                size: relative.bounds.size,
+                offset: Self.finite(relative.bounds.origin),
+                size: Self.finite(relative.bounds.size),
                 strokeData: relative.dataRepresentation()
             ))
         }
@@ -73,9 +81,10 @@ final class InkStore {
 
     /// Reconstruct the full drawing for the given (current) block layout.
     func rebuildDrawing(blocks: [Block]) -> PKDrawing {
+        let byKey = Dictionary(blocks.map { (Self.key($0), $0) }, uniquingKeysWith: { a, _ in a })
         var strokes: [PKStroke] = []
         for item in ink {
-            guard let block = blocks.block(hash: item.blockHash, seq: item.blockSeq),
+            guard let block = byKey["\(item.blockHash)#\(item.blockSeq)"],
                   let relative = try? PKDrawing(data: item.strokeData) else { continue }
             let placed = relative.transformed(
                 using: CGAffineTransform(translationX: block.frame.origin.x, y: block.frame.origin.y))
@@ -116,19 +125,25 @@ final class InkStore {
     func restoreOrphan(_ id: UUID, in blocks: [Block]) -> Bool {
         guard let index = orphans.firstIndex(where: { $0.id == id }), !blocks.isEmpty else { return false }
         var item = orphans.remove(at: index)
-        let last = item.lastKnownOrigin ?? .zero
+
+        // Fail safe: require a real last position AND a decodable payload before
+        // any mutation. Otherwise re-insert and bail — a stale offset or corrupt
+        // stroke must NOT teleport the ink to the top of the document or persist
+        // a broken copy; the orphan stays in the tray, restorable or deletable.
+        guard let last = item.lastKnownOrigin else { orphans.insert(item, at: index); return false }
+        guard let drawing = try? PKDrawing(data: item.strokeData) else {
+            orphans.insert(item, at: index); return false
+        }
         let target = Self.nearestBlock(to: last, in: blocks) ?? blocks[0]
 
         // Translate the (old-block-relative) stroke data so it lands at `last`
         // when later rendered as `targetOrigin + strokeData`.
         let shift = CGPoint(x: last.x - item.offset.x - target.frame.origin.x,
                             y: last.y - item.offset.y - target.frame.origin.y)
-        if let drawing = try? PKDrawing(data: item.strokeData) {
-            let shifted = drawing.transformed(using: CGAffineTransform(translationX: shift.x, y: shift.y))
-            item.strokeData = shifted.dataRepresentation()
-            item.offset = shifted.bounds.origin
-            item.size = shifted.bounds.size
-        }
+        let shifted = drawing.transformed(using: CGAffineTransform(translationX: shift.x, y: shift.y))
+        item.strokeData = shifted.dataRepresentation()
+        item.offset = Self.finite(shifted.bounds.origin)
+        item.size = Self.finite(shifted.bounds.size)
         item.blockHash = target.hash
         item.blockSeq = target.seq
         item.lastKnownOrigin = nil
@@ -138,20 +153,40 @@ final class InkStore {
 
     // MARK: Persistence
 
-    func save(blocks: [Block], documentText: String) {
+    @discardableResult
+    func save(blocks: [Block], documentText: String) -> Bool {
+        // Never overwrite a sidecar written by a newer build (see isReadOnly).
+        guard !isReadOnly else { return true }
         let sidecar = Sidecar(
             documentHash: Hashing.documentHash(documentText),
-            layoutWidth: layoutWidth,
+            layoutWidth: layoutWidth.isFinite ? layoutWidth : 1390,
             blocks: blocks.map(BlockSnapshot.init),
             ink: ink,
             orphans: orphans,
             appVersion: Self.appVersion
         )
-        guard let data = try? sidecar.encoded() else { return }
-        var coordError: NSError?
-        NSFileCoordinator().coordinate(writingItemAt: sidecarURL, options: .forReplacing, error: &coordError) { url in
-            try? data.write(to: url, options: .atomic)
+        let data: Data
+        do { data = try sidecar.encoded() }
+        catch { onSaveFailure?(error); return false }
+
+        // One coordinated retry before giving up, so a transient coordination
+        // failure during a background flush doesn't silently drop the ink.
+        if coordinatedWrite(data) != nil, let retryError = coordinatedWrite(data) {
+            onSaveFailure?(retryError)
+            return false
         }
+        return true
+    }
+
+    /// Coordinated atomic write of the sidecar. Returns the error on failure,
+    /// nil on success.
+    private func coordinatedWrite(_ data: Data) -> Error? {
+        var coordError: NSError?
+        var writeError: Error?
+        NSFileCoordinator().coordinate(writingItemAt: sidecarURL, options: .forReplacing, error: &coordError) { url in
+            do { try data.write(to: url, options: .atomic) } catch { writeError = error }
+        }
+        return coordError ?? writeError
     }
 
     /// Load existing ink. Returns the saved sidecar (with its block snapshot) so
@@ -160,23 +195,32 @@ final class InkStore {
     func load() -> Sidecar? {
         guard FileManager.default.fileExists(atPath: sidecarURL.path) else { return nil }
         var loaded: Sidecar?
+        var decodeError: Error?
         var hadData = false
         var coordError: NSError?
         NSFileCoordinator().coordinate(readingItemAt: sidecarURL, options: [], error: &coordError) { url in
             guard let data = try? Data(contentsOf: url) else { return }
             hadData = true
-            loaded = try? Sidecar.decoded(from: data)
+            do { loaded = try Sidecar.decoded(from: data) }
+            catch { decodeError = error }
         }
         if let loaded {
             ink = loaded.ink
             orphans = loaded.orphans
             layoutWidth = loaded.layoutWidth
+        } else if let sidecarError = decodeError as? SidecarError {
+            // Written by a newer build — the bytes are FINE, just unreadable by
+            // this schema. Go read-only so we never overwrite it; no .corrupt
+            // backup (nothing is corrupt).
+            switch sidecarError { case .newerVersion: isReadOnly = true }
         } else if hadData {
-            // Undecodable (corrupted, or written by a newer app version).
-            // Preserve the bytes before the next save overwrites them.
-            let backup = sidecarURL.appendingPathExtension("corrupt")
-            try? FileManager.default.removeItem(at: backup)
-            try? FileManager.default.copyItem(at: sidecarURL, to: backup)
+            // Genuinely undecodable. Preserve the bytes under a UNIQUE name so a
+            // later corruption can't overwrite this evidence.
+            let stamp = Int(Date().timeIntervalSince1970)
+            let backup = sidecarURL.appendingPathExtension("corrupt-\(stamp)")
+            if !FileManager.default.fileExists(atPath: backup.path) {
+                try? FileManager.default.copyItem(at: sidecarURL, to: backup)
+            }
         }
         return loaded
     }
@@ -249,6 +293,33 @@ final class InkStore {
             return containing
         }
         return blocks.min(by: { abs($0.frame.midY - point.y) < abs($1.frame.midY - point.y) })
+    }
+
+    /// The block a stroke should anchor to: the one whose vertical span overlaps
+    /// the stroke's bounds the most, so a tall mark (a brace, a long underline, a
+    /// circle drawn around several blocks) belongs to the block it covers most —
+    /// not just whichever block its top edge happened to land in. Falls back to
+    /// the vertically nearest block when there is no overlap (e.g. a scribble in
+    /// the writing margin below the last block).
+    static func anchorBlock(for rect: CGRect, in blocks: [Block]) -> Block? {
+        var best: (Block, CGFloat)?
+        for block in blocks {
+            let overlap = min(rect.maxY, block.frame.maxY) - max(rect.minY, block.frame.minY)
+            if overlap > 0, best == nil || overlap > best!.1 {
+                best = (block, overlap)
+            }
+        }
+        if let best { return best.0 }
+        return nearestBlock(to: CGPoint(x: rect.midX, y: rect.midY), in: blocks)
+    }
+
+    /// Clamp non-finite scalars to 0 so a degenerate stroke bounds can never make
+    /// the sidecar JSON unencodable (which would otherwise silently drop a save).
+    static func finite(_ p: CGPoint) -> CGPoint {
+        CGPoint(x: p.x.isFinite ? p.x : 0, y: p.y.isFinite ? p.y : 0)
+    }
+    static func finite(_ s: CGSize) -> CGSize {
+        CGSize(width: s.width.isFinite ? s.width : 0, height: s.height.isFinite ? s.height : 0)
     }
 
     static let appVersion: String =

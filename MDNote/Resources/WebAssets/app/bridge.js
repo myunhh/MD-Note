@@ -15,6 +15,7 @@
 
   var PAGE_WIDTH = 1390;
   var paperStyle = "plain";
+  var textScale = 1;
 
   // --- Hashing (must match Swift MDNoteCore.Hashing) ----------------------
 
@@ -84,6 +85,11 @@
       seqCounts[h] = seq + 1;
       el.setAttribute("data-block-hash", h);
       el.setAttribute("data-block-seq", String(seq));
+      // Freeze the plain source text BEFORE KaTeX/highlight mutate the DOM, so
+      // layout().text stays the string the hash (and the legacy hash) was built
+      // from — math blocks otherwise report rendered-glyph soup and detach ink
+      // on a future hashing-scheme migration.
+      el.setAttribute("data-block-text", el.textContent || "");
     });
   }
 
@@ -121,7 +127,14 @@
   function highlightCode(root) {
     if (!window.hljs) return;
     root.querySelectorAll("pre code").forEach(function (el) {
-      try { window.hljs.highlightElement(el); } catch (e) { /* unknown lang */ }
+      try {
+        window.hljs.highlightElement(el);
+        // Surface the detected language as a badge (CSS ::before). hljs only
+        // adds a language-* class when it is confident, so the badge appears
+        // only for identified languages. textContent is untouched.
+        var lang = (el.className.match(/language-([\w+#-]+)/) || [])[1];
+        if (lang) { var pre = el.closest("pre"); if (pre) pre.setAttribute("data-lang", lang); }
+      } catch (e) { /* unknown lang */ }
     });
   }
 
@@ -168,16 +181,47 @@
     });
   }
 
+  // Strip a leading YAML front-matter fence so Obsidian/Jekyll/Hugo metadata
+  // doesn't render as a stray <hr> + bogus heading at the top of the note.
+  // Guarded tightly: the body must be non-empty and contain no blank line, so a
+  // real `---` thematic break with prose under it is never eaten. Render-only —
+  // never replicated into Swift documentHash, so change-detection is untouched.
+  function stripFrontMatter(src) {
+    var m = /^﻿?---[ \t]*\r?\n((?:[^\n]*\r?\n)*?)(?:---|\.\.\.)[ \t]*(?:\r?\n|$)/.exec(src);
+    if (!m) return src;
+    var body = m[1];
+    if (!body.trim()) return src;                 // empty fence -> not front matter
+    if (/\n[ \t]*\r?\n/.test(body)) return src;   // genuine INTERIOR blank line -> two real rules
+    return src.slice(m[0].length);
+  }
+
+  // GitHub/Notion callouts: `> [!NOTE]` etc. Runs AFTER tagBlocks so the block
+  // hash is still taken over the original "[!NOTE]" text (ink stays anchored);
+  // the visible label is drawn by CSS ::before, never injected as text.
+  function transformCallouts(root) {
+    root.querySelectorAll("blockquote").forEach(function (bq) {
+      var first = bq.querySelector("p");
+      if (!first) return;
+      var m = first.innerHTML.match(/^\s*\[!(NOTE|TIP|IMPORTANT|WARNING|CAUTION)\]\s*(?:<br\s*\/?>)?\s*/i);
+      if (!m) return;
+      bq.classList.add("callout", "callout-" + m[1].toLowerCase());
+      first.innerHTML = first.innerHTML.replace(/^\s*\[!\w+\]\s*(?:<br\s*\/?>)?\s*/i, "");
+      if (!first.innerHTML.trim()) first.remove();
+    });
+  }
+
   function render(markdown) {
     var root = document.getElementById("content");
-    root.innerHTML = md.render(markdown || "");
+    root.innerHTML = md.render(stripFrontMatter(markdown || ""));
     rewriteImages(root);
     transformChecklists(root);
     tagBlocks(root);
+    transformCallouts(root);
     highlightCode(root);
     renderMath(root);
     watchImages(root);
     document.body.className = "paper-" + paperStyle;
+    document.documentElement.style.setProperty("--text-scale", String(textScale));
     return root.querySelectorAll("[data-source-line]").length;
   }
 
@@ -203,7 +247,7 @@
         y: r.top + sy,
         width: r.width,
         height: r.height,
-        text: el.textContent || "",
+        text: el.getAttribute("data-block-text") || el.textContent || "",
       });
     });
     return out;
@@ -251,6 +295,26 @@
     if (document.body) { document.body.className = "paper-" + paperStyle; }
   }
 
+  // Uniform reading text scale. Only font-size scales; the 1390/1080 page
+  // geometry is fixed, so ink stays pixel-locked. Triggers a re-measure so the
+  // native side re-anchors ink to the reflowed block frames.
+  function setTextScale(s) {
+    textScale = (typeof s === "number" && s > 0) ? s : 1;
+    document.documentElement.style.setProperty("--text-scale", String(textScale));
+    scheduleLayoutNotify();
+  }
+
+  // Word count + reading time over the rendered text. Counts CJK characters
+  // individually and Latin runs as words (~250 units/min).
+  function stats() {
+    var t = (document.getElementById("content").textContent || "");
+    var cjkRe = /[぀-ヿ㐀-䶿一-鿿가-힣]/g;
+    var cjk = (t.match(cjkRe) || []).length;
+    var latin = (t.replace(cjkRe, " ").trim().match(/[^\s]+/g) || []).length;
+    var count = latin + cjk;
+    return { words: count, minutes: Math.max(1, Math.round(count / 250)) };
+  }
+
   window.MDNote = {
     pageWidth: PAGE_WIDTH,
     render: render,
@@ -261,6 +325,8 @@
     blockHash: blockHash,
     normalize: normalize,
     setPaper: setPaper,
+    setTextScale: setTextScale,
+    stats: stats,
   };
 
   setPaper(paperStyle);

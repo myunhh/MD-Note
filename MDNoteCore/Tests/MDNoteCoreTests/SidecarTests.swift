@@ -1,8 +1,33 @@
 import XCTest
+import Foundation
 import CoreGraphics
 @testable import MDNoteCore
 
 final class SidecarTests: XCTestCase {
+
+    func testNewerVersionThrowsInsteadOfDecodingAsCorrupt() throws {
+        let blocks = [Block].from(textsAndFrames: [
+            ("Title", CGRect(x: 0, y: 0, width: 600, height: 40)),
+        ])
+        let sidecar = Sidecar(
+            documentHash: "abc", layoutWidth: 720,
+            blocks: blocks.map(BlockSnapshot.init), ink: [], appVersion: "test"
+        )
+        let data = try sidecar.encoded()
+
+        // A normal current-version file still decodes cleanly.
+        XCTAssertNoThrow(try Sidecar.decoded(from: data))
+
+        // Bump the on-disk version to simulate a file written by a newer build.
+        var obj = try XCTUnwrap(JSONSerialization.jsonObject(with: data) as? [String: Any])
+        obj["version"] = Sidecar.currentVersion + 1
+        let bumped = try JSONSerialization.data(withJSONObject: obj)
+
+        XCTAssertThrowsError(try Sidecar.decoded(from: bumped)) { error in
+            XCTAssertEqual(error as? SidecarError, .newerVersion(Sidecar.currentVersion + 1),
+                           "a newer sidecar must surface as newerVersion, not be treated as corrupt")
+        }
+    }
 
     func testRoundTrip() throws {
         let blocks = [Block].from(textsAndFrames: [

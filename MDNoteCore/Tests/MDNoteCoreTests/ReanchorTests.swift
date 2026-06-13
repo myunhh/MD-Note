@@ -230,6 +230,33 @@ final class ReanchorTests: XCTestCase {
         XCTAssertEqual(result.orphaned.map(\.id), [mark.id])
     }
 
+    func testMovedDuplicateFollowsNearestNotDocumentOrder() {
+        // Two identical "dup" blocks are relocated to the TOP, above A,B. The
+        // ink's old "dup" (at line 2) falls off the LCS and routes through the
+        // moved-block pass, which now has two surviving "dup" candidates: new
+        // index 0 (line 0) and index 1 (line 1). Document-order pairing would
+        // grab index 0; proximity must pick index 1 (nearest in source order),
+        // so the ink doesn't jump to a more-distant identical block.
+        let old = [Block].from(textsAndFrames: [
+            ("A", CGRect(x: 0, y: 0, width: 600, height: 20)),
+            ("B", CGRect(x: 0, y: 30, width: 600, height: 20)),
+            ("dup", CGRect(x: 0, y: 60, width: 600, height: 20)),   // line 2 <- anchor
+        ])
+        let mark = ink(on: old[2], offset: .zero)
+
+        let new = [Block].from(textsAndFrames: [
+            ("dup", CGRect(x: 0, y: 0, width: 600, height: 20)),    // seq 0, line 0
+            ("dup", CGRect(x: 0, y: 30, width: 600, height: 20)),   // seq 1, line 1 <- nearest
+            ("A", CGRect(x: 0, y: 60, width: 600, height: 20)),
+            ("B", CGRect(x: 0, y: 90, width: 600, height: 20)),
+        ])
+
+        let result = Reanchor.reanchor(ink: [mark], oldBlocks: old, newBlocks: new)
+        XCTAssertTrue(result.orphaned.isEmpty)
+        XCTAssertEqual(result.followed.first?.blockSeq, 1, "follows the nearer dup (seq 1), not the doc-order-first (seq 0)")
+        XCTAssertEqual(result.followed.first?.resolvedOrigin(in: new), CGPoint(x: 0, y: 30))
+    }
+
     func testMovedDuplicatesPairInDocumentOrder() {
         // Two identical blocks both displaced off the LCS pair up in order.
         let old = [Block].from(textsAndFrames: [

@@ -22,6 +22,12 @@ struct OutlineItem: Decodable, Identifiable, Equatable {
     var id: Double { y }
 }
 
+/// Word count + estimated reading time for the rendered document.
+struct DocStats: Decodable, Equatable {
+    let words: Int
+    let minutes: Int
+}
+
 /// Wraps a WKWebView that renders markdown via the bundled web assets and
 /// exposes the per-block geometry needed to anchor ink.
 @MainActor
@@ -81,6 +87,19 @@ final class MarkdownRenderer: NSObject {
     /// Set the paper background style ("plain" / "ruled" / "grid" / "dots").
     func setPaper(_ style: String) async {
         _ = try? await webView.evaluateJavaScript("MDNote.setPaper(\(Self.jsStringLiteral(style)))")
+    }
+
+    /// Set the uniform reading text scale (1 = default). Only font-size scales;
+    /// the 1390/1080 page geometry stays fixed so ink stays pixel-locked.
+    func setTextScale(_ scale: Double) async {
+        _ = try? await webView.evaluateJavaScript("MDNote.setTextScale(\(scale))")
+    }
+
+    /// Word count + reading time over the rendered text.
+    func stats() async -> DocStats? {
+        guard let json = (try? await webView.evaluateJavaScript("JSON.stringify(MDNote.stats())")) as? String,
+              let data = json.data(using: .utf8) else { return nil }
+        return try? JSONDecoder().decode(DocStats.self, from: data)
     }
 
     /// Folder that relative image paths in the document resolve against.
@@ -179,11 +198,16 @@ final class LocalAssetSchemeHandler: NSObject, WKURLSchemeHandler {
         if relative.hasPrefix("/") { relative.removeFirst() }
         relative = relative.removingPercentEncoding ?? relative
 
-        let fileURL = base.appendingPathComponent(relative).standardizedFileURL
-        // Never let a path escape the document's folder. Compare with a
-        // trailing separator so a sibling like "notes-private" can't pass a
-        // plain string-prefix check against base "notes".
-        let basePath = base.standardizedFileURL.path
+        let fileURL = base.appendingPathComponent(relative).standardizedFileURL.resolvingSymlinksInPath()
+        // Never let a path escape the document's folder. Resolve symlinks on
+        // BOTH sides — `standardizedFileURL` only collapses ".." textually, so a
+        // symlink inside an imported folder (e.g. images/x.png -> /etc/passwd)
+        // would otherwise pass a plain prefix check and leak bytes from outside.
+        // The Documents container itself is reached via /var -> /private/var, so
+        // the base must be resolved too or every valid asset would be rejected.
+        // Trailing separator keeps a sibling like "notes-private" from passing a
+        // string-prefix check against base "notes".
+        let basePath = base.standardizedFileURL.resolvingSymlinksInPath().path
         guard fileURL.path == basePath || fileURL.path.hasPrefix(basePath + "/"),
               let data = try? Data(contentsOf: fileURL) else {
             task.didFailWithError(URLError(.fileDoesNotExist)); return

@@ -52,9 +52,18 @@ public enum Reanchor {
             movedTargets[block.hash, default: []].append(index)
         }
         for (index, oldB) in oldBlocks.enumerated() where !matchedOld.contains(index) {
-            guard var targets = movedTargets[oldB.hash], !targets.isEmpty else { continue }
-            survivors[key(oldB.hash, oldB.seq)] = newBlocks[targets.removeFirst()]
-            movedTargets[oldB.hash] = targets
+            guard let targets = movedTargets[oldB.hash], !targets.isEmpty else { continue }
+            // Pick the surviving duplicate NEAREST in source order rather than
+            // the first in document order: deleting one of several identical
+            // blocks must not fling its ink to an unrelated copy in a distant
+            // section. Tie-break on the smaller new index for determinism.
+            let pick = targets.min { a, b in
+                let da = abs(newBlocks[a].sourceLineStart - oldB.sourceLineStart)
+                let db = abs(newBlocks[b].sourceLineStart - oldB.sourceLineStart)
+                return da != db ? da < db : a < b
+            }!
+            survivors[key(oldB.hash, oldB.seq)] = newBlocks[pick]
+            movedTargets[oldB.hash] = targets.filter { $0 != pick }
         }
 
         var result = Result()
