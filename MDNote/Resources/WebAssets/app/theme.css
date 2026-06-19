@@ -6,6 +6,7 @@
    view centers/zooms the whole page, keeping the ink canvas pixel-locked. */
 
 :root {
+  color-scheme: light;        /* app is light-only; tell WebKit so form controls match */
   --page-width: 1390px;     /* total canvas: text column + right writing margin */
   --content-width: 1080px;  /* markdown text column (left-aligned) */
   --paper: #fbfaf7;
@@ -14,7 +15,11 @@
   --rule: #e7e3da;
   --line: #e3ded2;          /* paper ruling / grid / dots */
   --accent: #c2410c;
+  --accent-soft: rgba(194, 65, 12, 0.06);
   --code-bg: #f3f1ea;
+  /* uniform reading text scale (1 = default); only font-size scales, never the
+     fixed 1390/1080 geometry, so ink stays pixel-locked. */
+  --text-scale: 1;
   /* vertical divider where the text column ends and the writing margin begins */
   --divider: linear-gradient(to right,
     transparent calc(var(--content-width) - 1px),
@@ -30,15 +35,15 @@ html, body {
   padding: 0;
   width: var(--page-width);
   background-color: var(--paper);
-  -webkit-text-size-adjust: 100%;
 }
 
 body {
   color: var(--ink);
   font-family: -apple-system, "SF Pro Text", "Helvetica Neue", "Apple SD Gothic Neo", system-ui, sans-serif;
-  font-size: 18px;
+  font-size: calc(18px * var(--text-scale));
   line-height: 1.75;
   -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
 }
 
 /* Paper styles — the right writing margin shows these clearly. Default = plain. */
@@ -67,11 +72,18 @@ body.paper-dots {
   background-position: 18px 18px, 0 0;
   background-repeat: repeat, no-repeat;
 }
+/* Export: drop every paper background (lattice + divider) so the shared/printed
+   PDF is clean white-ish paper, not the on-screen writing grid. */
+body.exporting { background-image: none !important; }
 
 .md-content {
   width: var(--content-width);
   /* page-like margins; big bottom pad to write past the last block */
   padding: 88px 90px 440px;
+  /* keep long URLs / inline code from spilling past the 1080 column into the
+     writing margin; keep-all leaves Korean words intact. */
+  overflow-wrap: anywhere;
+  word-break: keep-all;
 }
 
 /* Headings */
@@ -81,6 +93,7 @@ body.paper-dots {
   font-weight: 700;
   margin: 1.6em 0 0.5em;
   letter-spacing: -0.01em;
+  text-wrap: balance;            /* even multi-line headings, no orphan words */
 }
 .md-content h1 { font-size: 2.1em; margin-top: 0; }
 .md-content h2 { font-size: 1.6em; padding-bottom: 0.2em; border-bottom: 1px solid var(--rule); }
@@ -89,8 +102,14 @@ body.paper-dots {
 .md-content h5, .md-content h6 { font-size: 1em; color: var(--ink-soft); }
 
 /* Body */
-.md-content p { margin: 0.7em 0; }
-.md-content a { color: var(--accent); text-decoration: none; }
+.md-content p { margin: 0.7em 0; text-wrap: pretty; }   /* kill paragraph orphans */
+.md-content a {
+  color: var(--accent);
+  text-decoration: underline;
+  text-decoration-thickness: 0.06em;
+  text-underline-offset: 0.16em;
+  text-decoration-color: color-mix(in srgb, var(--accent) 55%, transparent);
+}
 .md-content strong { font-weight: 700; }
 .md-content em { font-style: italic; }
 
@@ -99,13 +118,56 @@ body.paper-dots {
 .md-content li { margin: 0.25em 0; }
 .md-content li::marker { color: var(--ink-soft); }
 
-/* Quote */
-.md-content blockquote {
-  margin: 1em 0;
-  padding: 0.3em 1.1em;
-  border-left: 4px solid var(--rule);
+/* Quote (plain blockquote; callouts below override these) */
+.md-content blockquote:not(.callout) {
+  position: relative;
+  margin: 1.1em 0;
+  padding: 0.5em 1.1em 0.5em 1.35em;
+  border-left: 3px solid var(--accent);
+  border-radius: 0 8px 8px 0;
+  background: var(--accent-soft);
   color: var(--ink-soft);
 }
+.md-content blockquote:not(.callout) > p { font-style: italic; }
+.md-content blockquote:not(.callout)::before {
+  content: "\201C";
+  position: absolute;
+  left: 0.18em;
+  top: 0.02em;
+  font-size: 1.8em;
+  line-height: 1;
+  color: color-mix(in srgb, var(--accent) 24%, transparent);
+  pointer-events: none;
+}
+.md-content blockquote > p:first-child { margin-top: 0; }
+.md-content blockquote > p:last-child { margin-bottom: 0; }
+
+/* Callouts (GitHub/Notion `> [!NOTE]` etc.) — pale tints, label via ::before so
+   no extra text enters the block's identity hash. */
+.md-content .callout {
+  border: 1px solid;
+  border-radius: 10px;
+  padding: 0.7em 1.1em;
+  margin: 1.1em 0;
+  color: var(--ink);
+}
+.md-content .callout::before {
+  display: block;
+  font-weight: 700;
+  font-size: 0.9em;
+  letter-spacing: 0.01em;
+  margin-bottom: 0.3em;
+}
+.md-content .callout-note { border-color: #b9cbe0; background: #f1f5fa; }
+.md-content .callout-note::before { content: "Note"; color: #185fa5; }
+.md-content .callout-tip { border-color: #bcd9c2; background: #f0f7f1; }
+.md-content .callout-tip::before { content: "Tip"; color: #2f7d3a; }
+.md-content .callout-important { border-color: #d3c1e8; background: #f6f1fb; }
+.md-content .callout-important::before { content: "Important"; color: #6f42c1; }
+.md-content .callout-warning { border-color: #e6cba8; background: #faf4ea; }
+.md-content .callout-warning::before { content: "Warning"; color: #a8650f; }
+.md-content .callout-caution { border-color: #e6c2bd; background: #fbf1ef; }
+.md-content .callout-caution::before { content: "Caution"; color: #b4422e; }
 
 /* Code */
 .md-content code {
@@ -114,23 +176,55 @@ body.paper-dots {
   background: var(--code-bg);
   padding: 0.12em 0.36em;
   border-radius: 5px;
+  overflow-wrap: anywhere;
 }
 .md-content pre {
+  position: relative;
   background: var(--code-bg);
   border: 1px solid var(--rule);
   border-radius: 10px;
   padding: 16px 18px;
   overflow-x: auto;
   line-height: 1.55;
+  font-variant-ligatures: none;
+  tab-size: 2;
 }
 .md-content pre code { background: none; padding: 0; font-size: 0.86em; }
+/* Language badge — only on fenced blocks whose language hljs identified. */
+.md-content pre[data-lang] { padding-top: 38px; }
+.md-content pre[data-lang]::before {
+  content: attr(data-lang);
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 28px;
+  padding: 0 16px;
+  font: 600 11px/28px "SF Mono", ui-monospace, Menlo, monospace;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+  background: var(--code-bg);
+  filter: brightness(0.96);
+  border-bottom: 1px solid var(--rule);
+  border-radius: 10px 10px 0 0;
+}
 
-/* Rule */
-.md-content hr { border: none; border-top: 1px solid var(--rule); margin: 2em 0; }
+/* Rule — centered ornament rather than an edge-to-edge line that fights the ruling */
+.md-content hr {
+  border: none;
+  height: auto;
+  margin: 1.9em 0;
+  text-align: center;
+}
+.md-content hr::after {
+  content: "· · ·";
+  color: var(--ink-soft);
+  letter-spacing: 0.45em;
+  font-size: 1.1em;
+}
 
 /* Tables */
 .md-content table { border-collapse: collapse; margin: 1em 0; width: 100%; font-size: 0.95em; }
-.md-content th, .md-content td { border: 1px solid var(--rule); padding: 8px 12px; text-align: left; }
+.md-content th, .md-content td { border: 1px solid var(--rule); padding: 8px 12px; text-align: left; overflow-wrap: anywhere; }
 .md-content th { background: var(--code-bg); font-weight: 700; }
 
 /* Images */
@@ -138,7 +232,11 @@ body.paper-dots {
 
 /* Task lists */
 .md-content li.task-list-item { list-style: none; margin-left: -1.3em; }
-.md-content input[type="checkbox"] { margin-right: 0.5em; transform: translateY(1px); }
+.md-content input[type="checkbox"] { margin-right: 0.5em; transform: translateY(1px); accent-color: var(--accent); }
 
 /* Math (KaTeX) */
-.md-content .katex-display { overflow-x: auto; overflow-y: hidden; padding: 2px 0; }
+.md-content .katex-display { overflow-x: auto; overflow-y: hidden; margin: 1.4em 0; padding: 0.3em 0; }
+
+/* Footnotes (if a footnote plugin is present) */
+.md-content .footnote-ref a { text-decoration: none; }
+.md-content .footnotes { font-size: 0.9em; color: var(--ink-soft); border-top: 1px solid var(--rule); margin-top: 2.4em; padding-top: 0.6em; }

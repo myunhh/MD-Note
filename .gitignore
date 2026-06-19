@@ -22,5 +22,8 @@ node_modules/
 # but the npm scratch dir is not.
 WebAssets/.npm-scratch/
 
+# App Store submission package (kept local, not tracked)
+publish/
+
 # Claude Code local settings
 .claude/settings.local.json

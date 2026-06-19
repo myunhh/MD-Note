@@ -13,5 +13,6 @@ struct ContentView: View {
                     DocumentScreen(doc: doc)
                 }
         }
+        .tint(.mdAccent)   // unify native chrome with the paper theme's accent
     }
 }

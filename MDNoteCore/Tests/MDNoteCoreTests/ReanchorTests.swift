@@ -160,9 +160,9 @@ final class ReanchorTests: XCTestCase {
         XCTAssertNil(suggestion)
     }
 
-    // MARK: Reordering
+    // MARK: Reordering / moved blocks
 
-    func testReorderKeepsLongerRunMatched() {
+    func testReorderFollowsBothLCSAndMovedBlock() {
         let old = [Block].from(textsAndFrames: [
             ("alpha", CGRect(x: 0, y: 0, width: 600, height: 20)),
             ("beta", CGRect(x: 0, y: 30, width: 600, height: 20)),
@@ -179,12 +179,106 @@ final class ReanchorTests: XCTestCase {
         ])
 
         let result = Reanchor.reanchor(ink: [onAlpha, onGamma], oldBlocks: old, newBlocks: new)
-        // LCS([alpha,beta,gamma],[gamma,alpha,beta]) = [alpha,beta]; gamma drops.
-        XCTAssertEqual(Set(result.followed.map(\.id)), [onAlpha.id])
-        XCTAssertEqual(Set(result.orphaned.map(\.id)), [onGamma.id])
+        // LCS([alpha,beta,gamma],[gamma,alpha,beta]) = [alpha,beta]; gamma falls
+        // off the LCS but survives via the moved-block pass.
+        XCTAssertEqual(Set(result.followed.map(\.id)), [onAlpha.id, onGamma.id])
+        XCTAssertTrue(result.orphaned.isEmpty)
 
-        // Followed alpha still resolves correctly at its new position.
         let movedAlpha = result.followed.first { $0.id == onAlpha.id }!
         XCTAssertEqual(movedAlpha.resolvedOrigin(in: new), CGPoint(x: 0, y: 30))
+        let movedGamma = result.followed.first { $0.id == onGamma.id }!
+        XCTAssertEqual(movedGamma.resolvedOrigin(in: new), CGPoint(x: 0, y: 5),
+                       "ink follows gamma to the top")
+    }
+
+    func testSectionMovedToEndKeepsInk() {
+        // A whole section relocated far down the document — way off the LCS.
+        let old = [Block].from(textsAndFrames: [
+            ("moved heading", CGRect(x: 0, y: 0, width: 600, height: 20)),
+            ("a", CGRect(x: 0, y: 30, width: 600, height: 20)),
+            ("b", CGRect(x: 0, y: 60, width: 600, height: 20)),
+            ("c", CGRect(x: 0, y: 90, width: 600, height: 20)),
+        ])
+        let mark = ink(on: old[0], offset: CGPoint(x: 3, y: 4))
+
+        let new = [Block].from(textsAndFrames: [
+            ("a", CGRect(x: 0, y: 0, width: 600, height: 20)),
+            ("b", CGRect(x: 0, y: 30, width: 600, height: 20)),
+            ("c", CGRect(x: 0, y: 60, width: 600, height: 20)),
+            ("moved heading", CGRect(x: 0, y: 90, width: 600, height: 20)),
+        ])
+
+        let result = Reanchor.reanchor(ink: [mark], oldBlocks: old, newBlocks: new)
+        XCTAssertTrue(result.orphaned.isEmpty)
+        XCTAssertEqual(result.followed.first?.resolvedOrigin(in: new), CGPoint(x: 3, y: 94))
+    }
+
+    func testMovedAndEditedBlockStillOrphans() {
+        let old = [Block].from(textsAndFrames: [
+            ("original text", CGRect(x: 0, y: 0, width: 600, height: 20)),
+            ("anchor", CGRect(x: 0, y: 30, width: 600, height: 20)),
+        ])
+        let mark = ink(on: old[0], offset: .zero)
+
+        // Block moved AND edited -> different hash, nothing to re-attach to.
+        let new = [Block].from(textsAndFrames: [
+            ("anchor", CGRect(x: 0, y: 0, width: 600, height: 20)),
+            ("original text, revised", CGRect(x: 0, y: 30, width: 600, height: 20)),
+        ])
+
+        let result = Reanchor.reanchor(ink: [mark], oldBlocks: old, newBlocks: new)
+        XCTAssertEqual(result.orphaned.map(\.id), [mark.id])
+    }
+
+    func testMovedDuplicateFollowsNearestNotDocumentOrder() {
+        // Two identical "dup" blocks are relocated to the TOP, above A,B. The
+        // ink's old "dup" (at line 2) falls off the LCS and routes through the
+        // moved-block pass, which now has two surviving "dup" candidates: new
+        // index 0 (line 0) and index 1 (line 1). Document-order pairing would
+        // grab index 0; proximity must pick index 1 (nearest in source order),
+        // so the ink doesn't jump to a more-distant identical block.
+        let old = [Block].from(textsAndFrames: [
+            ("A", CGRect(x: 0, y: 0, width: 600, height: 20)),
+            ("B", CGRect(x: 0, y: 30, width: 600, height: 20)),
+            ("dup", CGRect(x: 0, y: 60, width: 600, height: 20)),   // line 2 <- anchor
+        ])
+        let mark = ink(on: old[2], offset: .zero)
+
+        let new = [Block].from(textsAndFrames: [
+            ("dup", CGRect(x: 0, y: 0, width: 600, height: 20)),    // seq 0, line 0
+            ("dup", CGRect(x: 0, y: 30, width: 600, height: 20)),   // seq 1, line 1 <- nearest
+            ("A", CGRect(x: 0, y: 60, width: 600, height: 20)),
+            ("B", CGRect(x: 0, y: 90, width: 600, height: 20)),
+        ])
+
+        let result = Reanchor.reanchor(ink: [mark], oldBlocks: old, newBlocks: new)
+        XCTAssertTrue(result.orphaned.isEmpty)
+        XCTAssertEqual(result.followed.first?.blockSeq, 1, "follows the nearer dup (seq 1), not the doc-order-first (seq 0)")
+        XCTAssertEqual(result.followed.first?.resolvedOrigin(in: new), CGPoint(x: 0, y: 30))
+    }
+
+    func testMovedDuplicatesPairInDocumentOrder() {
+        // Two identical blocks both displaced off the LCS pair up in order.
+        let old = [Block].from(textsAndFrames: [
+            ("dup", CGRect(x: 0, y: 0, width: 600, height: 20)),
+            ("x", CGRect(x: 0, y: 30, width: 600, height: 20)),
+            ("dup", CGRect(x: 0, y: 60, width: 600, height: 20)),
+        ])
+        let onFirst = ink(on: old[0], offset: .zero)
+        let onSecond = ink(on: old[2], offset: CGPoint(x: 1, y: 1))
+
+        // "x" stays (LCS anchor); both dups shift around it.
+        let new = [Block].from(textsAndFrames: [
+            ("x", CGRect(x: 0, y: 0, width: 600, height: 20)),
+            ("dup", CGRect(x: 0, y: 30, width: 600, height: 20)),
+            ("dup", CGRect(x: 0, y: 60, width: 600, height: 20)),
+        ])
+
+        let result = Reanchor.reanchor(ink: [onFirst, onSecond], oldBlocks: old, newBlocks: new)
+        XCTAssertTrue(result.orphaned.isEmpty)
+        // LCS keeps one dup + x; the leftover old dup pairs with the leftover
+        // new dup. Both end up anchored, each on its own occurrence.
+        let seqs = Set(result.followed.map(\.blockSeq))
+        XCTAssertEqual(seqs, [0, 1], "each ink lands on a distinct occurrence")
     }
 }

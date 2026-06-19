@@ -32,10 +32,38 @@ public enum Reanchor {
         // Map a surviving old block identity -> its new identity.
         // Key: "hash#seq" of the OLD block. Value: the matched NEW block.
         var survivors: [String: Block] = [:]
+        var matchedOld = Set<Int>()
+        var matchedNew = Set<Int>()
         for pair in pairs {
             let oldB = oldBlocks[pair.oldIndex]
             let newB = newBlocks[pair.newIndex]
             survivors[key(oldB.hash, oldB.seq)] = newB
+            matchedOld.insert(pair.oldIndex)
+            matchedNew.insert(pair.newIndex)
+        }
+
+        // Second pass: a block MOVED elsewhere in the document falls off the
+        // LCS (which only matches in-order subsequences) even though identical
+        // content survives. Pair the leftover old/new blocks that share a hash,
+        // in document order, so ink follows a relocated section instead of
+        // orphaning.
+        var movedTargets: [String: [Int]] = [:]
+        for (index, block) in newBlocks.enumerated() where !matchedNew.contains(index) {
+            movedTargets[block.hash, default: []].append(index)
+        }
+        for (index, oldB) in oldBlocks.enumerated() where !matchedOld.contains(index) {
+            guard let targets = movedTargets[oldB.hash], !targets.isEmpty else { continue }
+            // Pick the surviving duplicate NEAREST in source order rather than
+            // the first in document order: deleting one of several identical
+            // blocks must not fling its ink to an unrelated copy in a distant
+            // section. Tie-break on the smaller new index for determinism.
+            let pick = targets.min { a, b in
+                let da = abs(newBlocks[a].sourceLineStart - oldB.sourceLineStart)
+                let db = abs(newBlocks[b].sourceLineStart - oldB.sourceLineStart)
+                return da != db ? da < db : a < b
+            }!
+            survivors[key(oldB.hash, oldB.seq)] = newBlocks[pick]
+            movedTargets[oldB.hash] = targets.filter { $0 != pick }
         }
 
         var result = Result()

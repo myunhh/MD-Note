@@ -42,10 +42,30 @@ public struct Sidecar: Codable, Equatable, Sendable {
         return try encoder.encode(self)
     }
 
+    /// Decode a sidecar, gating on its version so a file written by a NEWER app
+    /// build is recognised as *newer*, not corrupt. The caller can then refuse
+    /// to overwrite it (instead of clobbering the user's ink with an older
+    /// schema). A genuine decode failure still throws the underlying error.
     public static func decoded(from data: Data) throws -> Sidecar {
-        try JSONDecoder().decode(Sidecar.self, from: data)
+        if let env = try? JSONDecoder().decode(VersionEnvelope.self, from: data),
+           env.version > currentVersion {
+            throw SidecarError.newerVersion(env.version)
+        }
+        return try JSONDecoder().decode(Sidecar.self, from: data)
     }
 }
+
+/// Errors surfaced while loading a sidecar.
+public enum SidecarError: Error, Equatable, Sendable {
+    /// The file was written by a newer app version (version > currentVersion).
+    /// Its bytes are intact — do not back up as `.corrupt`, and do not overwrite.
+    case newerVersion(Int)
+}
+
+/// Cheap probe that reads only the version field, so a forward-incompatible
+/// sidecar can be detected before attempting a full decode against this build's
+/// schema.
+private struct VersionEnvelope: Decodable { let version: Int }
 
 /// Lightweight, geometry-free record of a block as it was when ink was saved.
 /// (Geometry is recomputed from a fresh render on load, so we don't persist it.)
