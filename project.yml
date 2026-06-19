@@ -31,6 +31,10 @@ targets:
         # and in Finder file sharing, so .md files + their image folders can be added.
         UIFileSharingEnabled: true
         LSSupportsOpeningDocumentsInPlace: true
+        # Export compliance: the app uses only Apple-standard crypto (no custom
+        # encryption) and is exempt. Declaring NO here stops App Store Connect
+        # from asking the encryption question on every upload.
+        ITSAppUsesNonExemptEncryption: false
         # Paper stays paper: the document canvas is light-only, so opt the whole
         # app out of dark mode instead of shipping a half-dark UI.
         UIUserInterfaceStyle: Light
@@ -46,6 +50,8 @@ targets:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.mdnote.app
         PRODUCT_NAME: MD Note
+        MARKETING_VERSION: "1.0"
+        CURRENT_PROJECT_VERSION: "1"
         SWIFT_VERSION: "5.0"
         TARGETED_DEVICE_FAMILY: "2"
         GENERATE_INFOPLIST_FILE: NO
