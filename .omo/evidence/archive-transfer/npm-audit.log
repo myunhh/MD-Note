@@ -1,0 +1,5 @@
+npm error code ENOLOCK
+npm error audit This command requires an existing lockfile.
+npm error audit Try creating one first with: npm i --package-lock-only
+npm error audit Original error: loadVirtual requires existing shrinkwrap file
+npm error A complete log of this run can be found in: C:\Users\picom\AppData\Local\npm-cache\_logs\2026-10-16T03_59_21_159Z-debug-0.log

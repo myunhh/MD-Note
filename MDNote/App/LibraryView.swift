@@ -218,6 +218,20 @@ final class LibraryStore: ObservableObject {
     }
 
     func importFile(from url: URL) {
+        if url.pathExtension.lowercased() == "zip" {
+            let destination = directory
+            Task {
+                do {
+                    _ = try await Task.detached(priority: .userInitiated) {
+                        let scoped = url.startAccessingSecurityScopedResource()
+                        defer { if scoped { url.stopAccessingSecurityScopedResource() } }
+                        return try NoteArchive.importZIP(url, into: destination)
+                    }.value
+                } catch { errorMessage = L10n.format("archiveImportFailed", error.localizedDescription) }
+                load(directory: directory)
+            }
+            return
+        }
         let scoped = url.startAccessingSecurityScopedResource()
         defer { if scoped { url.stopAccessingSecurityScopedResource() } }
         let dest = uniqueURL(directory.appendingPathComponent(url.lastPathComponent))
@@ -601,7 +615,7 @@ struct LibraryView: View {
         var types: [UTType] = []
         if let md = UTType(filenameExtension: "md") { types.append(md) }
         if let markdown = UTType("net.daringfireball.markdown") { types.append(markdown) }
-        types.append(contentsOf: [.plainText, .text])
+        types.append(contentsOf: [.plainText, .text, .zip])
         return types
     }
 }

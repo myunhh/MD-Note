@@ -130,3 +130,11 @@
 "trashRecoveryFailed" = "The move and its rollback could not finish. Your remaining files are retained in Documents and .Trash; keep them and recover them using Files before retrying.";
 "trashInvalidItem" = "This trash item has invalid recovery information. Keep its files and recover them using Files.";
 "trashOperationFailed" = "The trash operation could not finish: %@";
+"archiveUnsafePath" = "This archive uses an unsafe or unsupported path. Keep images inside the note’s folder; parent-folder paths and symbolic links are not supported.";
+"archiveLimitExceeded" = "The archive exceeds the limit: 2,000 entries, 64 MB per file, or 256 MB total.";
+"archiveMissingNote" = "The ZIP contains no supported Markdown or text note.";
+"archiveDamaged" = "The archive is damaged or its contents do not match its checksum.";
+"archiveMissingAsset" = "A referenced local image is missing or cannot be read. Import the note’s whole folder first.";
+"archiveImportFailed" = "Could not import ZIP: %@";
+"archiveExportFailed" = "Could not export note archive: %@";
+"archiveImportedFolder" = "Imported Note";

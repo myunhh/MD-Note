@@ -130,3 +130,11 @@
 "trashRecoveryFailed" = "이동과 되돌리기를 완료하지 못했습니다. 남은 파일은 문서 폴더와 .Trash에 보관됩니다. 파일을 보존하고 파일 앱에서 복구한 후 다시 시도하세요.";
 "trashInvalidItem" = "이 항목의 복원 정보가 올바르지 않습니다. 파일을 보존하고 파일 앱에서 복구하세요.";
 "trashOperationFailed" = "휴지통 작업을 완료하지 못했습니다: %@";
+"archiveUnsafePath" = "안전하지 않거나 지원하지 않는 경로입니다. 이미지를 노트 폴더 안에 보관하세요. 상위 폴더 경로와 심볼릭 링크는 지원하지 않습니다.";
+"archiveLimitExceeded" = "압축 파일이 한도를 초과합니다: 항목 2,000개, 파일당 64 MB, 전체 256 MB.";
+"archiveMissingNote" = "ZIP 파일에 지원하는 마크다운 또는 텍스트 노트가 없습니다.";
+"archiveDamaged" = "압축 파일이 손상되었거나 내용의 체크섬이 일치하지 않습니다.";
+"archiveMissingAsset" = "참조한 로컬 이미지가 없거나 읽을 수 없습니다. 먼저 노트 폴더 전체를 가져오세요.";
+"archiveImportFailed" = "ZIP을 가져올 수 없습니다: %@";
+"archiveExportFailed" = "노트 압축 파일을 내보낼 수 없습니다: %@";
+"archiveImportedFolder" = "가져온 노트";

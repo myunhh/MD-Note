@@ -801,50 +801,43 @@ final class DocumentCanvasViewController: UIViewController {
         }
     }
 
-    // MARK: Share source (.md + .inknote)
+    // MARK: Share source archive
 
     func shareSource() {
+        guard !exportInFlight else { return }
         flushPendingSave()                          // write debounced ink before reading the sidecar
         guard let md = currentURL else { return }
-        if let sidecar = inkStore?.sidecarURL,
-           FileManager.default.fileExists(atPath: sidecar.path),
-           let zip = makeShareZip(md: md, sidecar: sidecar) {
-            presentShareSheet(forItems: [zip])
-        } else {
-            presentShareSheet(forItems: [md])       // no ink yet: just the .md
+        exportInFlight = true
+        Task { [weak self] in
+            guard let self else { return }
+            defer { self.exportInFlight = false }
+            do {
+                let noteData = try await Task.detached(priority: .userInitiated) { try NoteArchive.readNote(md) }.value
+                guard let markdown = String(data: noteData, encoding: .utf8) else { throw NoteArchive.Failure.damaged }
+                let sources = try await self.renderer.imageSources(markdown: markdown)
+                let zip = try await Task.detached(priority: .userInitiated) {
+                    try NoteArchive.export(note: md, noteData: noteData, imageSources: sources)
+                }.value
+                guard self.currentURL == md, self.view.window != nil else {
+                    try? FileManager.default.removeItem(at: zip.deletingLastPathComponent())
+                    return
+                }
+                self.presentShareSheet(forItems: [zip], cleanupDirectory: zip.deletingLastPathComponent())
+            } catch {
+                self.session?.flash(L10n.format("archiveExportFailed", error.localizedDescription), kind: .error)
+            }
         }
-    }
-
-    /// Bundle the note + its ink sidecar into one zip (via NSFileCoordinator's
-    /// `.forUploading`, which yields a system-built archive). The recipient
-    /// unzips to a folder that `importFolder` + `adoptStrandedSidecarIfNeeded`
-    /// re-pair by content hash — keeping the original filenames preserves that.
-    private func makeShareZip(md: URL, sidecar: URL) -> URL? {
-        let fm = FileManager.default
-        let stem = md.deletingPathExtension().lastPathComponent
-        let staging = fm.temporaryDirectory
-            .appendingPathComponent("share-\(UUID().uuidString)", isDirectory: true)
-            .appendingPathComponent(stem, isDirectory: true)
-        do {
-            try fm.createDirectory(at: staging, withIntermediateDirectories: true)
-            try fm.copyItem(at: md, to: staging.appendingPathComponent(md.lastPathComponent))
-            try fm.copyItem(at: sidecar, to: staging.appendingPathComponent(sidecar.lastPathComponent))
-        } catch { return nil }
-
-        var zipURL: URL?
-        var coordError: NSError?
-        NSFileCoordinator().coordinate(readingItemAt: staging, options: .forUploading, error: &coordError) { tmp in
-            let dest = fm.temporaryDirectory.appendingPathComponent("\(stem).zip")
-            try? fm.removeItem(at: dest)
-            if (try? fm.copyItem(at: tmp, to: dest)) != nil { zipURL = dest }
-        }
-        return zipURL
     }
 
     private func presentShareSheet(for url: URL) { presentShareSheet(forItems: [url]) }
 
-    private func presentShareSheet(forItems items: [URL]) {
+    private func presentShareSheet(forItems items: [URL], cleanupDirectory: URL? = nil) {
         let controller = UIActivityViewController(activityItems: items, applicationActivities: nil)
+        if let directory = cleanupDirectory {
+            controller.completionWithItemsHandler = { _, _, _, _ in
+                try? FileManager.default.removeItem(at: directory)
+            }
+        }
         if let popover = controller.popoverPresentationController {
             popover.sourceView = view
             popover.sourceRect = CGRect(x: view.bounds.midX, y: view.safeAreaInsets.top + 8,
