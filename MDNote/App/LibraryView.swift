@@ -187,20 +187,14 @@ final class LibraryStore: ObservableObject {
     }
 
     func delete(_ doc: LibraryDoc) {
-        try? FileManager.default.removeItem(at: doc.url)
-        try? FileManager.default.removeItem(at: doc.url.appendingPathExtension("inknote"))
-        UserDefaults.standard.removeObject(forKey: Self.viewStateKey(for: doc.url))
-        UserDefaults.standard.removeObject(forKey: Self.paperKey(for: doc.url))
+        do { try TrashStore.discard(doc.url) }
+        catch { errorMessage = TrashStore.message(for: error) }
         load(directory: directory)
     }
 
     func delete(_ folder: LibraryFolder) {
-        // Clear per-document defaults for every contained note before removing.
-        for url in containedDocURLs(in: folder.url) {
-            UserDefaults.standard.removeObject(forKey: Self.viewStateKey(for: url))
-            UserDefaults.standard.removeObject(forKey: Self.paperKey(for: url))
-        }
-        try? FileManager.default.removeItem(at: folder.url)
+        do { try TrashStore.discard(folder.url) }
+        catch { errorMessage = TrashStore.message(for: error) }
         load(directory: directory)
     }
 
@@ -335,6 +329,7 @@ struct LibraryView: View {
     @StateObject private var librarySearch = LibrarySearchModel()
 
     @State private var showImporter = false
+    @State private var showTrash = false
     @State private var importIsFolder = false
     @State private var showPrompt = false
     @State private var promptTitle = ""
@@ -450,7 +445,7 @@ struct LibraryView: View {
                             .buttonStyle(CardButtonStyle())
                             .contextMenu {
                                 Button { askRename(folder) } label: { Label(L10n.text("rename"), systemImage: "pencil") }
-                                Button(role: .destructive) { store.delete(folder) } label: { Label(L10n.text("delete"), systemImage: "trash") }
+                                Button(role: .destructive) { store.delete(folder) } label: { Label(L10n.text("trashMove"), systemImage: "trash") }
                             }
                     }
                     ForEach(visibleDocuments) { doc in
@@ -466,7 +461,7 @@ struct LibraryView: View {
                                           systemImage: metadata.isFavorite(doc.url) ? "star.slash" : "star")
                                 }
                                 Button { askRename(doc) } label: { Label(L10n.text("rename"), systemImage: "pencil") }
-                                Button(role: .destructive) { store.delete(doc) } label: { Label(L10n.text("delete"), systemImage: "trash") }
+                                Button(role: .destructive) { store.delete(doc) } label: { Label(L10n.text("trashMove"), systemImage: "trash") }
                             }
                     }
                 }
@@ -486,6 +481,7 @@ struct LibraryView: View {
                                        root: LibraryStore.documentsURL)
         }
         .onChange(of: store.documents) { _, _ in searchRevision += 1 }
+        .onChange(of: store.folders) { _, _ in searchRevision += 1 }
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 Menu {
@@ -510,6 +506,8 @@ struct LibraryView: View {
                     Divider()
                     Button { importIsFolder = false; showImporter = true } label: { Label(L10n.text("importFile"), systemImage: "doc") }
                     Button { importIsFolder = true; showImporter = true } label: { Label(L10n.text("importFolder"), systemImage: "folder") }
+                    Divider()
+                    Button { showTrash = true } label: { Label(L10n.text("trashTitle"), systemImage: "trash") }
                 } label: {
                     Image(systemName: "plus")
                 }
@@ -536,7 +534,14 @@ struct LibraryView: View {
             if importIsFolder { urls.forEach(store.importFolder) }
             else { urls.forEach(store.importFile) }
         }
-        .onAppear { store.load(directory: directory) }
+        .sheet(isPresented: $showTrash, onDismiss: {
+            store.load(directory: directory)
+            searchRevision += 1
+        }) { TrashView() }
+        .onAppear {
+            store.load(directory: directory)
+            searchRevision += 1
+        }
         .onReceive(NotificationCenter.default.publisher(
             for: UIApplication.willEnterForegroundNotification)) { _ in
             store.load(directory: directory)
