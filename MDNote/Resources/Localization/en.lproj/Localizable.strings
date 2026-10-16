@@ -78,3 +78,13 @@
 "libraryMetadataNoFavorites" = "No Matching Favorites";
 "libraryMetadataFavoritesHint" = "Add notes to Favorites from their menu. Favorites here are limited to this folder and your search.";
 "libraryMetadataShowAll" = "Show All Notes";
+"documentSearch.title" = "Find in Document";
+"documentSearch.prompt" = "Enter text to find";
+"documentSearch.searching" = "Searching…";
+"documentSearch.failed" = "Search unavailable. Try again.";
+"documentSearch.noMatches" = "No matches";
+"documentSearch.count" = "%ld of %ld";
+"documentSearch.clear" = "Clear document search";
+"documentSearch.previous" = "Previous match";
+"documentSearch.next" = "Next match";
+"documentSearch.close" = "Close document search";

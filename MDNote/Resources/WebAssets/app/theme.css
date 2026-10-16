@@ -20,6 +20,8 @@
   /* uniform reading text scale (1 = default); only font-size scales, never the
      fixed 1390/1080 geometry, so ink stays pixel-locked. */
   --text-scale: 1;
+  --search-match: #ffe08a;
+  --search-active: #f5aa42;
   /* vertical divider where the text column ends and the writing margin begins */
   --divider: linear-gradient(to right,
     transparent calc(var(--content-width) - 1px),
@@ -75,6 +77,14 @@ body.paper-dots {
 /* Export: drop every paper background (lattice + divider) so the shared/printed
    PDF is clean white-ish paper, not the on-screen writing grid. */
 body.exporting { background-image: none !important; }
+
+::highlight(document-search) { background-color: var(--search-match); color: var(--ink); }
+::highlight(document-search-active) { background-color: var(--search-active); color: var(--ink); }
+#document-search-overlay { position: fixed; inset: 0; overflow: hidden; pointer-events: none; z-index: 10; }
+#document-search-overlay span { position: absolute; background: var(--search-match); opacity: 0.45; }
+#document-search-overlay .search-active { background: var(--search-active); opacity: 0.65; }
+body.exporting #document-search-overlay { display: none; }
+body.exporting ::highlight(document-search), body.exporting ::highlight(document-search-active) { background-color: transparent; color: inherit; }
 
 .md-content {
   width: var(--content-width);

@@ -16,6 +16,98 @@
   var PAGE_WIDTH = 1390;
   var paperStyle = "plain";
   var textScale = 1;
+  var searchQuery = "";
+  var searchIndex = 0;
+  var searchRevision = -1;
+  var searchRanges = [];
+
+  function clearSearchPaint() {
+    if (window.CSS && CSS.highlights) {
+      CSS.highlights.delete("document-search");
+      CSS.highlights.delete("document-search-active");
+    }
+    var overlay = document.getElementById("document-search-overlay");
+    if (overlay) overlay.remove();
+  }
+
+  function paintSearch() {
+    clearSearchPaint();
+    if (!searchRanges.length) return;
+    if (window.CSS && CSS.highlights && window.Highlight) {
+      var all = new Highlight();
+      searchRanges.forEach(function (range) { all.add(range); });
+      CSS.highlights.set("document-search", all);
+      CSS.highlights.set("document-search-active", new Highlight(searchRanges[searchIndex]));
+      return;
+    }
+    // iOS 17.0/17.1: a clipped, fixed paint layer never enters block identity
+    // or document layout, unlike mark/span wrappers around the matched text.
+    var overlay = document.createElement("div");
+    overlay.id = "document-search-overlay";
+    overlay.setAttribute("aria-hidden", "true");
+    searchRanges.forEach(function (range, index) {
+      Array.prototype.forEach.call(range.getClientRects(), function (rect) {
+        if (!rect.width || !rect.height) return;
+        var mark = document.createElement("span");
+        mark.className = index === searchIndex ? "search-active" : "search-match";
+        mark.style.cssText = "left:" + rect.left + "px;top:" + rect.top +
+          "px;width:" + rect.width + "px;height:" + rect.height + "px";
+        overlay.appendChild(mark);
+      });
+    });
+    document.body.appendChild(overlay);
+  }
+
+  function searchResult() {
+    var range = searchRanges[searchIndex];
+    return { count: searchRanges.length, index: searchIndex,
+      y: range ? range.getBoundingClientRect().top + (window.scrollY || 0) : null };
+  }
+
+  function search(query, index, revision) {
+    if (revision < searchRevision) return searchResult();
+    searchRevision = revision;
+    searchQuery = query || "";
+    searchRanges = [];
+    if (searchQuery) {
+      // Escaping gives literal matching while Unicode case folding preserves
+      // the original UTF-16 offsets used by DOM Range (lowercasing may not).
+      var pattern = new RegExp(searchQuery.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "giu");
+      var root = document.getElementById("content");
+      var walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT | NodeFilter.SHOW_ELEMENT);
+      var groups = [], group = null, node;
+      while ((node = walker.nextNode())) {
+        if (node.nodeType === Node.ELEMENT_NODE) {
+          if (node.tagName === "BR") group = null;
+          continue;
+        }
+        if (node.parentElement.closest("script,style,.katex-mathml,[hidden]")) continue;
+        var owner = node.parentElement.closest("p,li,td,th,pre,h1,h2,h3,h4,h5,h6,blockquote") || root;
+        if (!group || group.owner !== owner) {
+          group = { owner: owner, text: "", nodes: [] };
+          groups.push(group);
+        }
+        group.nodes.push({ node: node, start: group.text.length });
+        group.text += node.nodeValue;
+      }
+      groups.forEach(function (entry) {
+        pattern.lastIndex = 0;
+        var match;
+        while ((match = pattern.exec(entry.text))) {
+          var start = match.index, end = start + match[0].length;
+          var first = entry.nodes.find(function (part) { return part.start + part.node.length > start; });
+          var last = entry.nodes.find(function (part) { return part.start + part.node.length >= end; });
+          var range = document.createRange();
+          range.setStart(first.node, start - first.start);
+          range.setEnd(last.node, end - last.start);
+          if (range.getClientRects().length) searchRanges.push(range);
+        }
+      });
+    }
+    searchIndex = searchRanges.length ? ((index % searchRanges.length) + searchRanges.length) % searchRanges.length : 0;
+    paintSearch();
+    return searchResult();
+  }
 
   // --- Hashing (must match Swift MDNoteCore.Hashing) ----------------------
 
@@ -211,6 +303,7 @@
   }
 
   function render(markdown) {
+    clearSearchPaint();
     var root = document.getElementById("content");
     root.innerHTML = md.render(stripFrontMatter(markdown || ""));
     rewriteImages(root);
@@ -222,6 +315,7 @@
     watchImages(root);
     document.body.className = "paper-" + paperStyle;
     document.documentElement.style.setProperty("--text-scale", String(textScale));
+    search(searchQuery, searchIndex, searchRevision);
     return root.querySelectorAll("[data-source-line]").length;
   }
 
@@ -327,6 +421,7 @@
     setPaper: setPaper,
     setTextScale: setTextScale,
     stats: stats,
+    search: search,
   };
 
   setPaper(paperStyle);

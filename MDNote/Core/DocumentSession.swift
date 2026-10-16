@@ -32,6 +32,11 @@ final class DocumentSession: ObservableObject {
     @Published var fingerDrawing = UserDefaults.standard.bool(forKey: "fingerDrawing")
     @Published var outline: [OutlineItem] = []
     @Published var docStats: DocStats?
+    @Published var searchQuery = ""
+    @Published var searchCount = 0
+    @Published var searchIndex = 0
+    @Published var searchPending = false
+    @Published var searchFailed = false
 
     /// Monotonic haptic triggers — bumped by the controller, consumed by
     /// `.sensoryFeedback` in the document view.
@@ -82,6 +87,17 @@ final class DocumentSession: ObservableObject {
     func scrollToEnd() { controller?.scrollToEnd() }
     func exportPDF() { controller?.exportPDF() }
     func shareSource() { controller?.shareSource() }
+    func updateSearch(_ query: String) {
+        searchQuery = query
+        searchIndex = 0
+        searchCount = 0
+        controller?.refreshDocumentSearch(navigate: !query.isEmpty)
+    }
+    func moveSearch(_ delta: Int) {
+        guard searchCount > 0, !searchPending else { return }
+        searchIndex = (searchIndex + delta + searchCount) % searchCount
+        controller?.refreshDocumentSearch(navigate: true)
+    }
 }
 
 /// The bottom-sheet tray listing handwriting that lost its anchor block after an

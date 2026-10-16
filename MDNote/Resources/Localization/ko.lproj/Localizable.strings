@@ -78,3 +78,13 @@
 "libraryMetadataNoFavorites" = "일치하는 즐겨찾기가 없습니다";
 "libraryMetadataFavoritesHint" = "노트 메뉴에서 즐겨찾기에 추가하세요. 이 폴더와 검색 조건에 맞는 즐겨찾기만 표시됩니다.";
 "libraryMetadataShowAll" = "모든 노트 보기";
+"documentSearch.title" = "문서에서 찾기";
+"documentSearch.prompt" = "찾을 내용을 입력하세요";
+"documentSearch.searching" = "검색 중…";
+"documentSearch.failed" = "검색할 수 없습니다. 다시 시도하세요.";
+"documentSearch.noMatches" = "검색 결과 없음";
+"documentSearch.count" = "%ld / %ld";
+"documentSearch.clear" = "문서 검색 지우기";
+"documentSearch.previous" = "이전 검색 결과";
+"documentSearch.next" = "다음 검색 결과";
+"documentSearch.close" = "문서 검색 닫기";
