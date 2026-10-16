@@ -68,3 +68,13 @@
 "inkPosition" = "손글씨 %ld · 문서 %ldpt 부근";
 "inkNumber" = "손글씨 %ld";
 "orphanCount" = "자리를 잃은 필기 %ld개";
+"documentSearch.title" = "문서에서 찾기";
+"documentSearch.prompt" = "찾을 내용을 입력하세요";
+"documentSearch.searching" = "검색 중…";
+"documentSearch.failed" = "검색할 수 없습니다. 다시 시도하세요.";
+"documentSearch.noMatches" = "검색 결과 없음";
+"documentSearch.count" = "%ld / %ld";
+"documentSearch.clear" = "문서 검색 지우기";
+"documentSearch.previous" = "이전 검색 결과";
+"documentSearch.next" = "다음 검색 결과";
+"documentSearch.close" = "문서 검색 닫기";

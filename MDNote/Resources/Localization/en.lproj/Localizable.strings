@@ -68,3 +68,13 @@
 "inkPosition" = "Handwriting %ld · Near %ld pt in document";
 "inkNumber" = "Handwriting %ld";
 "orphanCount" = "Unanchored handwriting: %ld";
+"documentSearch.title" = "Find in Document";
+"documentSearch.prompt" = "Enter text to find";
+"documentSearch.searching" = "Searching…";
+"documentSearch.failed" = "Search unavailable. Try again.";
+"documentSearch.noMatches" = "No matches";
+"documentSearch.count" = "%ld of %ld";
+"documentSearch.clear" = "Clear document search";
+"documentSearch.previous" = "Previous match";
+"documentSearch.next" = "Next match";
+"documentSearch.close" = "Close document search";

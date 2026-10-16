@@ -28,6 +28,12 @@ struct DocStats: Decodable, Equatable {
     let minutes: Int
 }
 
+struct DocumentSearchResult: Decodable {
+    let count: Int
+    let index: Int
+    let y: Double?
+}
+
 /// Wraps a WKWebView that renders markdown via the bundled web assets and
 /// exposes the per-block geometry needed to anchor ink.
 @MainActor
@@ -103,6 +109,13 @@ final class MarkdownRenderer: NSObject {
         guard let json = (try? await webView.evaluateJavaScript("JSON.stringify(MDNote.stats())")) as? String,
               let data = json.data(using: .utf8) else { return nil }
         return try? JSONDecoder().decode(DocStats.self, from: data)
+    }
+
+    func search(query: String, index: Int, revision: Int) async -> DocumentSearchResult? {
+        let expression = "MDNote.search(\(Self.jsStringLiteral(query)), \(index), \(revision))"
+        guard let json = (try? await webView.evaluateJavaScript("JSON.stringify(\(expression))")) as? String,
+              let data = json.data(using: .utf8) else { return nil }
+        return try? JSONDecoder().decode(DocumentSearchResult.self, from: data)
     }
 
     /// Folder that relative image paths in the document resolve against.

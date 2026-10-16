@@ -23,6 +23,8 @@ final class DocumentCanvasViewController: UIViewController {
     weak var session: DocumentSession?
 
     private let renderer = MarkdownRenderer()
+    private var documentSearchRevision = 0
+    private var documentSearchTask: Task<Void, Never>?
     private let canvasView = PKCanvasView()
     private let webContainer = UIView()           // sibling behind the canvas
     private var toolPicker: PKToolPicker?
@@ -190,6 +192,13 @@ final class DocumentCanvasViewController: UIViewController {
         // it would detach from the live document.
         guard url != requestedURL else { return }
         requestedURL = url
+        documentSearchTask?.cancel()
+        documentSearchRevision += 1
+        session?.searchQuery = ""
+        session?.searchCount = 0
+        session?.searchIndex = 0
+        session?.searchPending = false
+        session?.searchFailed = false
         currentURL = url
         inkStore = InkStore(documentURL: url)
         inkStore?.onSaveFailure = { [weak self] _ in
@@ -376,6 +385,30 @@ final class DocumentCanvasViewController: UIViewController {
         session?.outline = await renderer.outline()
         session?.docStats = await renderer.stats()
         rebuildAccessibilityElements()
+        refreshDocumentSearch(navigate: false)
+    }
+
+    func refreshDocumentSearch(navigate: Bool) {
+        documentSearchTask?.cancel()
+        documentSearchRevision += 1
+        guard let session else { return }
+        let revision = documentSearchRevision
+        let query = session.searchQuery
+        let index = session.searchIndex
+        session.searchFailed = false
+        guard didInitialLoad else { return }
+        session.searchPending = !query.isEmpty
+        documentSearchTask = Task { [weak self] in
+            guard let self, !Task.isCancelled else { return }
+            let result = await renderer.search(query: query, index: index, revision: revision)
+            guard !Task.isCancelled, revision == documentSearchRevision,
+                  session.searchQuery == query else { return }
+            session.searchPending = false
+            session.searchFailed = result == nil && !query.isEmpty
+            session.searchCount = result?.count ?? 0
+            session.searchIndex = result?.index ?? 0
+            if navigate, let y = result?.y, y.isFinite { scroll(toDocumentY: y) }
+        }
     }
 
     // MARK: VoiceOver

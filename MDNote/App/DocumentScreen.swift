@@ -7,6 +7,7 @@ struct DocumentScreen: View {
     @StateObject private var session = DocumentSession()
     @State private var showTray = false
     @State private var showOutline = false
+    @State private var showDocumentSearch = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
@@ -14,6 +15,14 @@ struct DocumentScreen: View {
             .ignoresSafeArea(edges: .bottom)
             .navigationTitle(doc.name)
             .navigationBarTitleDisplayMode(.inline)
+            .safeAreaInset(edge: .top, spacing: 0) {
+                if showDocumentSearch {
+                    DocumentSearchView(session: session) {
+                        session.updateSearch("")
+                        showDocumentSearch = false
+                    }
+                }
+            }
             .toolbar {
                 ToolbarItemGroup(placement: .topBarTrailing) {
                     Button { showOutline = true } label: {
@@ -56,6 +65,10 @@ struct DocumentScreen: View {
                         }
                     }
                     Menu {
+                        Button { showDocumentSearch = true } label: {
+                            Label(L10n.text("documentSearch.title"), systemImage: "magnifyingglass")
+                        }
+                        Divider()
                         Button { session.scrollToBeginning() } label: {
                             Label(L10n.text("goToBeginning"), systemImage: "arrow.up.to.line")
                         }
