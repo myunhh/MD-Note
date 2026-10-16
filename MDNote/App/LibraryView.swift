@@ -1,6 +1,7 @@
 import SwiftUI
 import UIKit
 import UniformTypeIdentifiers
+import MDNoteCore
 
 extension Color {
     /// The app's brand accent — the same terracotta as the web theme's
@@ -77,7 +78,7 @@ final class LibraryStore: ObservableObject {
 
     /// Extensions shown in the library. Matches what the importer accepts so
     /// imported plain-text/markdown-variant files don't silently vanish.
-    nonisolated static let documentExtensions: Set<String> = ["md", "markdown", "mdown", "mkd", "txt"]
+    nonisolated static let documentExtensions = LibrarySearch.documentExtensions
 
     func load(directory: URL) {
         self.directory = directory
@@ -328,6 +329,7 @@ struct LibraryView: View {
     let directory: URL
     @Binding var path: NavigationPath
     @StateObject private var store = LibraryStore()
+    @StateObject private var librarySearch = LibrarySearchModel()
 
     @State private var showImporter = false
     @State private var importIsFolder = false
@@ -337,22 +339,38 @@ struct LibraryView: View {
     @State private var promptText = ""
     @State private var promptAction: (String) -> Void = { _ in }
     @State private var searchText = ""
+    @State private var searchScope = LibrarySearchScope.entireLibrary
+    @State private var searchRevision = 0
     @AppStorage("librarySort") private var sortOrder = "modified"
 
     private let columns = [GridItem(.adaptive(minimum: 165, maximum: 220), spacing: 22)]
     private var isRoot: Bool { directory.standardizedFileURL == LibraryStore.documentsURL.standardizedFileURL }
 
+    private var trimmedSearchText: String { searchText.trimmingCharacters(in: .whitespacesAndNewlines) }
+    private var searchesEntireLibrary: Bool { searchScope == .entireLibrary && !trimmedSearchText.isEmpty }
+    private var searchRequest: LibrarySearchRequest {
+        LibrarySearchRequest(query: trimmedSearchText, scope: searchScope, revision: searchRevision)
+    }
+
+    private var visibleSearchResults: [LibrarySearchMatch] {
+        librarySearch.report.matches.sorted {
+            if sortOrder != "name", $0.modified != $1.modified { return $0.modified > $1.modified }
+            let nameOrder = $0.name.localizedCaseInsensitiveCompare($1.name)
+            return nameOrder == .orderedSame ? $0.relativePath < $1.relativePath : nameOrder == .orderedAscending
+        }
+    }
+
     private var visibleFolders: [LibraryFolder] {
-        guard !searchText.isEmpty else { return store.folders }
-        return store.folders.filter { $0.name.localizedCaseInsensitiveContains(searchText) }
+        guard !trimmedSearchText.isEmpty else { return store.folders }
+        return store.folders.filter { $0.name.localizedCaseInsensitiveContains(trimmedSearchText) }
     }
 
     private var visibleDocuments: [LibraryDoc] {
         var docs = store.documents
-        if !searchText.isEmpty {
-            let q = searchText.lowercased()
+        if !trimmedSearchText.isEmpty {
+            let q = trimmedSearchText.lowercased()
             docs = docs.filter {
-                $0.name.localizedCaseInsensitiveContains(searchText) || $0.searchText.contains(q)
+                $0.name.localizedCaseInsensitiveContains(trimmedSearchText) || $0.searchText.contains(q)
             }
         }
         if sortOrder == "name" {
@@ -363,7 +381,10 @@ struct LibraryView: View {
 
     var body: some View {
         ScrollView {
-            if store.folders.isEmpty && store.documents.isEmpty {
+            if searchesEntireLibrary {
+                LibrarySearchResultsView(model: librarySearch, query: trimmedSearchText,
+                                         matches: visibleSearchResults) { searchRevision += 1 }
+            } else if store.folders.isEmpty && store.documents.isEmpty {
                 VStack(spacing: 16) {
                     Image(systemName: "doc.text.image")
                         .font(.system(size: 52, weight: .light))
@@ -413,6 +434,15 @@ struct LibraryView: View {
         .navigationTitle(isRoot ? L10n.text("documents") : directory.lastPathComponent)
         .navigationBarTitleDisplayMode(isRoot ? .large : .inline)
         .searchable(text: $searchText, prompt: L10n.text("searchNotes"))
+        .searchScopes($searchScope, activation: .onSearchPresentation) {
+            Text(L10n.text("librarySearchEntireLibrary")).tag(LibrarySearchScope.entireLibrary)
+            Text(L10n.text("librarySearchCurrentFolder")).tag(LibrarySearchScope.currentFolder)
+        }
+        .task(id: searchRequest) {
+            await librarySearch.search(query: searchesEntireLibrary ? trimmedSearchText : "",
+                                       root: LibraryStore.documentsURL)
+        }
+        .onChange(of: store.documents) { _, _ in searchRevision += 1 }
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 Menu {
@@ -462,6 +492,7 @@ struct LibraryView: View {
         .onReceive(NotificationCenter.default.publisher(
             for: UIApplication.willEnterForegroundNotification)) { _ in
             store.load(directory: directory)
+            searchRevision += 1
         }
     }
 

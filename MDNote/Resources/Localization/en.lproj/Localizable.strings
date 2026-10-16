@@ -68,3 +68,13 @@
 "inkPosition" = "Handwriting %ld · Near %ld pt in document";
 "inkNumber" = "Handwriting %ld";
 "orphanCount" = "Unanchored handwriting: %ld";
+"librarySearchEntireLibrary" = "Entire library";
+"librarySearchCurrentFolder" = "Current folder";
+"librarySearchLoading" = "Searching the library…";
+"librarySearchFailed" = "Could not search the library";
+"librarySearchFailedDetail" = "Your documents could not be read. Try searching again.";
+"librarySearchRetry" = "Try again";
+"librarySearchCount" = "%ld matching notes";
+"librarySearchUnreadable" = "%ld files or folders could not be searched completely.";
+"librarySearchLarge" = "%ld files are larger than 8 MB. Only their names were searched.";
+"librarySearchNameMatch" = "Matched the note name. No text preview available.";

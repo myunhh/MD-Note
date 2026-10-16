@@ -68,3 +68,13 @@
 "inkPosition" = "손글씨 %ld · 문서 %ldpt 부근";
 "inkNumber" = "손글씨 %ld";
 "orphanCount" = "자리를 잃은 필기 %ld개";
+"librarySearchEntireLibrary" = "전체 보관함";
+"librarySearchCurrentFolder" = "현재 폴더";
+"librarySearchLoading" = "보관함 검색 중…";
+"librarySearchFailed" = "보관함을 검색할 수 없습니다";
+"librarySearchFailedDetail" = "문서를 읽을 수 없습니다. 다시 검색해 주세요.";
+"librarySearchRetry" = "다시 시도";
+"librarySearchCount" = "검색된 노트 %ld개";
+"librarySearchUnreadable" = "파일 또는 폴더 %ld개를 완전히 검색하지 못했습니다.";
+"librarySearchLarge" = "파일 %ld개가 8 MB보다 커서 이름만 검색했습니다.";
+"librarySearchNameMatch" = "노트 이름이 일치합니다. 본문 미리보기가 없습니다.";
