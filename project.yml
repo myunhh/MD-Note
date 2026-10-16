@@ -7,10 +7,33 @@ options:
   createIntermediateGroups: true
 
 packages:
+  ZIPFoundation:
+    url: https://github.com/weichsel/ZIPFoundation.git
+    exactVersion: 0.9.20
   MDNoteCore:
     path: MDNoteCore
 
+schemes:
+  MDNote:
+    build:
+      targets:
+        MDNote: all
+    test:
+      targets:
+        - MDNoteArchiveTests
+
 targets:
+  MDNoteArchiveTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - path: Tests/ArchiveTests
+    dependencies:
+      - target: MDNote
+      - package: ZIPFoundation
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: YES
   MDNote:
     type: application
     platform: iOS
@@ -25,6 +48,7 @@ targets:
         buildPhase: resources
     dependencies:
       - package: MDNoteCore
+      - package: ZIPFoundation
     info:
       path: MDNote/Info.plist
       properties:
@@ -51,6 +75,7 @@ targets:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.mdnote.app
         PRODUCT_NAME: MD Note
+        PRODUCT_MODULE_NAME: MDNote
         MARKETING_VERSION: "1.0"
         CURRENT_PROJECT_VERSION: "1"
         SWIFT_VERSION: "5.0"
