@@ -50,6 +50,8 @@ final class DocumentCanvasViewController: UIViewController {
     private var currentBlocks: [Block] = []
     private var linkRegions: [LinkRegion] = []
     private var inkStore: InkStore?
+    private var bookmarkStore: BookmarkStore?
+    private var bookmarkRecoveryURL: URL?
     private var saveWorkItem: DispatchWorkItem?
     private var stateWorkItem: DispatchWorkItem?
     private var fileWatcher: FileWatcher?
@@ -200,6 +202,9 @@ final class DocumentCanvasViewController: UIViewController {
         session?.searchPending = false
         session?.searchFailed = false
         currentURL = url
+        bookmarkRecoveryURL = nil
+        session?.bookmarkReady = false
+        loadBookmarks()
         inkStore = InkStore(documentURL: url)
         inkStore?.onSaveFailure = { [weak self] _ in
             self?.session?.flash(L10n.text("saveInkFailed"), kind: .error, duration: 8)
@@ -231,6 +236,16 @@ final class DocumentCanvasViewController: UIViewController {
         LibraryMetadataStore.shared.move(from: old, to: newURL)
         currentURL = newURL
         inkStore?.relocate(to: newURL)
+        do {
+            if let store = bookmarkStore { try store.relocate(to: newURL) }
+            else { try BookmarkStore.moveCompanion(from: old, to: newURL) }
+        }
+        catch {
+            bookmarkRecoveryURL = bookmarkStore?.documentURL ?? old
+            bookmarkStore = nil
+            session?.bookmarkError = L10n.text("bookmarkMoveFailed")
+            session?.flash(L10n.text("bookmarkMoveFailed"), kind: .error, duration: 8)
+        }
         renderer.setAssetBase(newURL.deletingLastPathComponent())
     }
 
@@ -242,9 +257,11 @@ final class DocumentCanvasViewController: UIViewController {
         if loadInFlight { reloadPending = true; return }
         loadInFlight = true
         isLoadingDocument = true
+        session?.bookmarkReady = false
         defer {
             isLoadingDocument = false
             loadInFlight = false
+            session?.bookmarkReady = didInitialLoad
             if reloadPending {
                 reloadPending = false
                 // If the first load never completed (zero-block bailout),
@@ -679,6 +696,66 @@ final class DocumentCanvasViewController: UIViewController {
         let target = min(max(CGFloat(y) * z + minY - 16, minY), maxY)
         canvasView.setContentOffset(CGPoint(x: canvasView.contentOffset.x, y: target),
                                     animated: !UIAccessibility.isReduceMotionEnabled)
+    }
+
+    func loadBookmarks() {
+        guard let url = currentURL else { return }
+        do {
+            let store = try BookmarkStore(documentURL: bookmarkRecoveryURL ?? url)
+            try store.relocate(to: url)
+            bookmarkStore = store
+            bookmarkRecoveryURL = nil
+            session?.bookmarks = store.bookmarks
+            session?.bookmarkError = nil
+        } catch {
+            bookmarkStore = nil
+            session?.bookmarkError = L10n.text("bookmarkReadFailed")
+        }
+    }
+
+    func addCurrentBookmark() {
+        guard didInitialLoad, !isLoadingDocument else { return }
+        let y = max(0, Double((canvasView.contentOffset.y + canvasView.adjustedContentInset.top + 16)
+                             / canvasView.zoomScale))
+        let block = currentBlocks.last { Double($0.frame.minY) <= y } ?? currentBlocks.first
+        let text = (block?.text ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+        let name = text.isEmpty ? L10n.text("bookmarkDefault") : String(text.prefix(80))
+        let bookmark = DocumentBookmark(name: name, y: y, height: Double(contentHeight), blocks: currentBlocks)
+        updateBookmarks { $0.append(bookmark) }
+    }
+
+    func renameBookmark(_ id: UUID, name: String) {
+        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        updateBookmarks { items in
+            if let index = items.firstIndex(where: { $0.id == id }) { items[index].name = trimmed }
+        }
+    }
+
+    func deleteBookmark(_ id: UUID) {
+        updateBookmarks { $0.removeAll { $0.id == id } }
+    }
+
+    private func updateBookmarks(_ edit: (inout [DocumentBookmark]) -> Void) {
+        guard let store = bookmarkStore else { return }
+        var items = store.bookmarks
+        edit(&items)
+        do {
+            try store.replace(with: items)
+            session?.bookmarks = store.bookmarks
+            session?.bookmarkError = nil
+        } catch {
+            session?.bookmarkError = L10n.text("bookmarkWriteFailed")
+        }
+    }
+
+    func jumpToBookmark(_ bookmark: DocumentBookmark) {
+        guard didInitialLoad, !isLoadingDocument else { return }
+        let destination = bookmark.resolve(in: currentBlocks, height: Double(contentHeight))
+        scroll(toDocumentY: destination.y)
+        if destination.usedFallback {
+            session?.flash(L10n.text("bookmarkFallback"), duration: 8)
+        }
     }
 
     func scrollToBeginning() {

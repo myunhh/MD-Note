@@ -128,12 +128,31 @@ final class LibraryStore: ObservableObject {
         guard !base.isEmpty, base != doc.name else { return }
         let dst = uniqueURL(doc.url.deletingLastPathComponent()
             .appendingPathComponent(base).appendingPathExtension(doc.url.pathExtension))
-        // Move the sidecar only if the note itself moved — otherwise the ink
-        // would detach from a note that stayed in place.
-        guard (try? FileManager.default.moveItem(at: doc.url, to: dst)) != nil else { return }
-        let oldSidecar = doc.url.appendingPathExtension("inknote")
-        if FileManager.default.fileExists(atPath: oldSidecar.path) {
-            try? FileManager.default.moveItem(at: oldSidecar, to: dst.appendingPathExtension("inknote"))
+        let fm = FileManager.default
+        let pairs = [(doc.url, dst)] + ["inknote", "bookmarks"].compactMap { suffix -> (URL, URL)? in
+            let source = doc.url.appendingPathExtension(suffix)
+            return fm.fileExists(atPath: source.path) ? (source, dst.appendingPathExtension(suffix)) : nil
+        }
+        guard [dst, dst.appendingPathExtension("inknote"), dst.appendingPathExtension("bookmarks")]
+            .allSatisfy({ !fm.fileExists(atPath: $0.path) }) else {
+            errorMessage = L10n.text("bookmarkRenameFailed")
+            return
+        }
+        var moved: [(URL, URL)] = []
+        do {
+            for pair in pairs {
+                try fm.moveItem(at: pair.0, to: pair.1)
+                moved.append(pair)
+            }
+        } catch {
+            var rollbackFailed = false
+            for pair in moved.reversed() {
+                do { try fm.moveItem(at: pair.1, to: pair.0) }
+                catch { rollbackFailed = true }
+            }
+            errorMessage = L10n.text(rollbackFailed ? "bookmarkRenameRecovery" : "bookmarkRenameFailed")
+            load(directory: directory)
+            return
         }
         migrateDocDefaults(from: doc.url, to: dst)   // keep paper + scroll/zoom across rename
         LibraryMetadataStore.shared.move(from: doc.url, to: dst)

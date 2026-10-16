@@ -8,6 +8,7 @@ struct DocumentScreen: View {
     @State private var showTray = false
     @State private var showOutline = false
     @State private var showDocumentSearch = false
+    @State private var showBookmarks = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
@@ -67,6 +68,9 @@ struct DocumentScreen: View {
                     Menu {
                         Button { showDocumentSearch = true } label: {
                             Label(L10n.text("documentSearch.title"), systemImage: "magnifyingglass")
+                        }
+                        Button { showBookmarks = true } label: {
+                            Label(L10n.text("bookmarkTitle"), systemImage: "bookmark")
                         }
                         Divider()
                         Button { session.scrollToBeginning() } label: {
@@ -141,6 +145,9 @@ struct DocumentScreen: View {
             .sensoryFeedback(.impact(weight: .light), trigger: session.impactTick)
             .sheet(isPresented: $showTray) {
                 OrphanTrayView(session: session)
+            }
+            .sheet(isPresented: $showBookmarks) {
+                BookmarksView(session: session)
             }
     }
 
