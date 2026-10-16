@@ -1,6 +1,7 @@
 import SwiftUI
 import UIKit
 import UniformTypeIdentifiers
+import MDNoteCore
 
 extension Color {
     /// The app's brand accent — the same terracotta as the web theme's
@@ -77,7 +78,7 @@ final class LibraryStore: ObservableObject {
 
     /// Extensions shown in the library. Matches what the importer accepts so
     /// imported plain-text/markdown-variant files don't silently vanish.
-    nonisolated static let documentExtensions: Set<String> = ["md", "markdown", "mdown", "mkd", "txt"]
+    nonisolated static let documentExtensions = LibrarySearch.documentExtensions
 
     func load(directory: URL) {
         self.directory = directory
@@ -331,6 +332,7 @@ struct LibraryView: View {
     @Binding var path: NavigationPath
     @StateObject private var store = LibraryStore()
     @ObservedObject private var metadata = LibraryMetadataStore.shared
+    @StateObject private var librarySearch = LibrarySearchModel()
 
     @State private var showImporter = false
     @State private var importIsFolder = false
@@ -340,25 +342,47 @@ struct LibraryView: View {
     @State private var promptText = ""
     @State private var promptAction: (String) -> Void = { _ in }
     @State private var searchText = ""
+    @State private var searchScope = LibrarySearchScope.entireLibrary
+    @State private var searchRevision = 0
     @AppStorage("librarySort") private var sortOrder = "modified"
     @AppStorage("libraryMetadataFavoritesOnly") private var favoritesOnly = false
 
     private let columns = [GridItem(.adaptive(minimum: 165, maximum: 220), spacing: 22)]
     private var isRoot: Bool { directory.standardizedFileURL == LibraryStore.documentsURL.standardizedFileURL }
 
+    private var trimmedSearchText: String { searchText.trimmingCharacters(in: .whitespacesAndNewlines) }
+    private var searchesEntireLibrary: Bool { searchScope == .entireLibrary && !trimmedSearchText.isEmpty }
+    private var searchRequest: LibrarySearchRequest {
+        LibrarySearchRequest(query: trimmedSearchText, scope: searchScope, revision: searchRevision)
+    }
+
+    private var visibleSearchResults: [LibrarySearchMatch] {
+        librarySearch.report.matches.filter { !favoritesOnly || metadata.isFavorite($0.url) }.sorted { lhs, rhs in
+            if sortOrder == "recent" {
+                let left = metadata.lastOpenedDate(lhs.url) ?? .distantPast
+                let right = metadata.lastOpenedDate(rhs.url) ?? .distantPast
+                if left != right { return left > right }
+            } else if sortOrder != "name", lhs.modified != rhs.modified {
+                return lhs.modified > rhs.modified
+            }
+            let nameOrder = lhs.name.localizedCaseInsensitiveCompare(rhs.name)
+            return nameOrder == .orderedSame ? lhs.relativePath < rhs.relativePath : nameOrder == .orderedAscending
+        }
+    }
+
     private var visibleFolders: [LibraryFolder] {
         guard !favoritesOnly else { return [] }
-        guard !searchText.isEmpty else { return store.folders }
-        return store.folders.filter { $0.name.localizedCaseInsensitiveContains(searchText) }
+        guard !trimmedSearchText.isEmpty else { return store.folders }
+        return store.folders.filter { $0.name.localizedCaseInsensitiveContains(trimmedSearchText) }
     }
 
     private var visibleDocuments: [LibraryDoc] {
         var docs = store.documents
         if favoritesOnly { docs = docs.filter { metadata.isFavorite($0.url) } }
-        if !searchText.isEmpty {
-            let q = searchText.lowercased()
+        if !trimmedSearchText.isEmpty {
+            let q = trimmedSearchText.lowercased()
             docs = docs.filter {
-                $0.name.localizedCaseInsensitiveContains(searchText) || $0.searchText.contains(q)
+                $0.name.localizedCaseInsensitiveContains(trimmedSearchText) || $0.searchText.contains(q)
             }
         }
         docs.sort { lhs, rhs in
@@ -378,7 +402,12 @@ struct LibraryView: View {
 
     var body: some View {
         ScrollView {
-            if favoritesOnly && visibleDocuments.isEmpty {
+            if searchesEntireLibrary {
+                LibrarySearchResultsView(model: librarySearch, query: trimmedSearchText,
+                                         matches: visibleSearchResults, favoritesOnly: $favoritesOnly) {
+                    searchRevision += 1
+                }
+            } else if favoritesOnly && visibleDocuments.isEmpty {
                 ContentUnavailableView {
                     Label(L10n.text("libraryMetadataNoFavorites"), systemImage: "star")
                 } description: {
@@ -448,6 +477,15 @@ struct LibraryView: View {
         .navigationTitle(isRoot ? L10n.text("documents") : directory.lastPathComponent)
         .navigationBarTitleDisplayMode(isRoot ? .large : .inline)
         .searchable(text: $searchText, prompt: L10n.text("searchNotes"))
+        .searchScopes($searchScope, activation: .onSearchPresentation) {
+            Text(L10n.text("librarySearchEntireLibrary")).tag(LibrarySearchScope.entireLibrary)
+            Text(L10n.text("librarySearchCurrentFolder")).tag(LibrarySearchScope.currentFolder)
+        }
+        .task(id: searchRequest) {
+            await librarySearch.search(query: searchesEntireLibrary ? trimmedSearchText : "",
+                                       root: LibraryStore.documentsURL)
+        }
+        .onChange(of: store.documents) { _, _ in searchRevision += 1 }
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 Menu {
@@ -502,6 +540,7 @@ struct LibraryView: View {
         .onReceive(NotificationCenter.default.publisher(
             for: UIApplication.willEnterForegroundNotification)) { _ in
             store.load(directory: directory)
+            searchRevision += 1
         }
     }
 
