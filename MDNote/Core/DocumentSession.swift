@@ -1,5 +1,6 @@
 import SwiftUI
 import UIKit
+import MDNoteCore
 
 /// A single orphaned-ink entry shown in the tray, with a rendered thumbnail and
 /// a human-readable label so it's distinguishable (incl. to VoiceOver).
@@ -32,6 +33,9 @@ final class DocumentSession: ObservableObject {
     @Published var fingerDrawing = UserDefaults.standard.bool(forKey: "fingerDrawing")
     @Published var outline: [OutlineItem] = []
     @Published var docStats: DocStats?
+    @Published var bookmarks: [DocumentBookmark] = []
+    @Published var bookmarkError: String?
+    @Published var bookmarkReady = false
 
     /// Monotonic haptic triggers — bumped by the controller, consumed by
     /// `.sensoryFeedback` in the document view.

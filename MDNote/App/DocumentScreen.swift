@@ -7,6 +7,7 @@ struct DocumentScreen: View {
     @StateObject private var session = DocumentSession()
     @State private var showTray = false
     @State private var showOutline = false
+    @State private var showBookmarks = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
@@ -56,6 +57,9 @@ struct DocumentScreen: View {
                         }
                     }
                     Menu {
+                        Button { showBookmarks = true } label: {
+                            Label(L10n.text("bookmarkTitle"), systemImage: "bookmark")
+                        }
                         Button { session.scrollToBeginning() } label: {
                             Label(L10n.text("goToBeginning"), systemImage: "arrow.up.to.line")
                         }
@@ -128,6 +132,9 @@ struct DocumentScreen: View {
             .sensoryFeedback(.impact(weight: .light), trigger: session.impactTick)
             .sheet(isPresented: $showTray) {
                 OrphanTrayView(session: session)
+            }
+            .sheet(isPresented: $showBookmarks) {
+                BookmarksView(session: session)
             }
     }
 
