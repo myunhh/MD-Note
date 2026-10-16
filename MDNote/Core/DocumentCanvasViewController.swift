@@ -219,6 +219,7 @@ final class DocumentCanvasViewController: UIViewController {
     /// and its sidecar — stays attached to the file.
     private func documentDidMove(to newURL: URL) {
         guard let old = currentURL, old != newURL else { return }
+        LibraryMetadataStore.shared.move(from: old, to: newURL)
         currentURL = newURL
         inkStore?.relocate(to: newURL)
         renderer.setAssetBase(newURL.deletingLastPathComponent())
