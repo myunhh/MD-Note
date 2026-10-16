@@ -135,6 +135,7 @@ final class LibraryStore: ObservableObject {
             try? FileManager.default.moveItem(at: oldSidecar, to: dst.appendingPathExtension("inknote"))
         }
         migrateDocDefaults(from: doc.url, to: dst)   // keep paper + scroll/zoom across rename
+        LibraryMetadataStore.shared.move(from: doc.url, to: dst)
         load(directory: directory)
     }
 
@@ -158,6 +159,7 @@ final class LibraryStore: ObservableObject {
         let dst = uniqueURL(folder.url.deletingLastPathComponent().appendingPathComponent(base),
                             isDirectory: true)
         guard (try? FileManager.default.moveItem(at: folder.url, to: dst)) != nil else { return }
+        LibraryMetadataStore.shared.move(from: folder.url, to: dst)
         // Every contained note moved to a new relative path; carry its per-doc
         // defaults (paper + scroll/zoom) along so they aren't silently reset.
         let dstPath = dst.standardizedFileURL.path
@@ -328,6 +330,7 @@ struct LibraryView: View {
     let directory: URL
     @Binding var path: NavigationPath
     @StateObject private var store = LibraryStore()
+    @ObservedObject private var metadata = LibraryMetadataStore.shared
 
     @State private var showImporter = false
     @State private var importIsFolder = false
@@ -338,32 +341,56 @@ struct LibraryView: View {
     @State private var promptAction: (String) -> Void = { _ in }
     @State private var searchText = ""
     @AppStorage("librarySort") private var sortOrder = "modified"
+    @AppStorage("libraryMetadataFavoritesOnly") private var favoritesOnly = false
 
     private let columns = [GridItem(.adaptive(minimum: 165, maximum: 220), spacing: 22)]
     private var isRoot: Bool { directory.standardizedFileURL == LibraryStore.documentsURL.standardizedFileURL }
 
     private var visibleFolders: [LibraryFolder] {
+        guard !favoritesOnly else { return [] }
         guard !searchText.isEmpty else { return store.folders }
         return store.folders.filter { $0.name.localizedCaseInsensitiveContains(searchText) }
     }
 
     private var visibleDocuments: [LibraryDoc] {
         var docs = store.documents
+        if favoritesOnly { docs = docs.filter { metadata.isFavorite($0.url) } }
         if !searchText.isEmpty {
             let q = searchText.lowercased()
             docs = docs.filter {
                 $0.name.localizedCaseInsensitiveContains(searchText) || $0.searchText.contains(q)
             }
         }
-        if sortOrder == "name" {
-            docs.sort { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
+        docs.sort { lhs, rhs in
+            if sortOrder == "recent" {
+                let left = metadata.lastOpenedDate(lhs.url) ?? .distantPast
+                let right = metadata.lastOpenedDate(rhs.url) ?? .distantPast
+                if left != right { return left > right }
+            } else if sortOrder != "name", lhs.modified != rhs.modified {
+                return lhs.modified > rhs.modified
+            }
+            let nameOrder = lhs.name.localizedCaseInsensitiveCompare(rhs.name)
+            if nameOrder != .orderedSame { return nameOrder == .orderedAscending }
+            return LibraryStore.relativeKey(for: lhs.url) < LibraryStore.relativeKey(for: rhs.url)
         }
         return docs
     }
 
     var body: some View {
         ScrollView {
-            if store.folders.isEmpty && store.documents.isEmpty {
+            if favoritesOnly && visibleDocuments.isEmpty {
+                ContentUnavailableView {
+                    Label(L10n.text("libraryMetadataNoFavorites"), systemImage: "star")
+                } description: {
+                    Text(L10n.text("libraryMetadataFavoritesHint"))
+                } actions: {
+                    Button(L10n.text("libraryMetadataShowAll")) {
+                        favoritesOnly = false
+                        searchText = ""
+                    }
+                }
+                .padding(.top, 80)
+            } else if store.folders.isEmpty && store.documents.isEmpty {
                 VStack(spacing: 16) {
                     Image(systemName: "doc.text.image")
                         .font(.system(size: 52, weight: .light))
@@ -398,9 +425,17 @@ struct LibraryView: View {
                             }
                     }
                     ForEach(visibleDocuments) { doc in
-                        NavigationLink(value: doc) { DocumentCard(doc: doc) }
+                        NavigationLink(value: doc) {
+                            DocumentCard(doc: doc, isFavorite: metadata.isFavorite(doc.url))
+                        }
                             .buttonStyle(CardButtonStyle())
                             .contextMenu {
+                                Button { metadata.toggleFavorite(doc.url) } label: {
+                                    Label(metadata.isFavorite(doc.url)
+                                          ? L10n.text("libraryMetadataRemoveFavorite")
+                                          : L10n.text("libraryMetadataAddFavorite"),
+                                          systemImage: metadata.isFavorite(doc.url) ? "star.slash" : "star")
+                                }
                                 Button { askRename(doc) } label: { Label(L10n.text("rename"), systemImage: "pencil") }
                                 Button(role: .destructive) { store.delete(doc) } label: { Label(L10n.text("delete"), systemImage: "trash") }
                             }
@@ -419,11 +454,16 @@ struct LibraryView: View {
                     Picker(L10n.text("sort"), selection: $sortOrder) {
                         Label(L10n.text("sortModified"), systemImage: "clock").tag("modified")
                         Label(L10n.text("sortName"), systemImage: "textformat").tag("name")
+                        Label(L10n.text("libraryMetadataSortRecent"), systemImage: "clock.arrow.circlepath").tag("recent")
+                    }
+                    Toggle(isOn: $favoritesOnly) {
+                        Label(L10n.text("libraryMetadataFavoritesOnly"), systemImage: "star")
                     }
                 } label: {
-                    Image(systemName: "arrow.up.arrow.down")
+                    Image(systemName: favoritesOnly ? "star.fill" : "arrow.up.arrow.down")
                 }
-                .accessibilityLabel(L10n.text("sort"))
+                .accessibilityLabel(L10n.text("libraryMetadataSortAndFilter"))
+                .accessibilityValue(favoritesOnly ? L10n.text("libraryMetadataFavoritesOnly") : L10n.text("libraryMetadataAllNotes"))
             }
             ToolbarItem(placement: .topBarTrailing) {
                 Menu {
@@ -505,6 +545,7 @@ struct LibraryView: View {
 
 struct DocumentCard: View {
     let doc: LibraryDoc
+    var isFavorite = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
@@ -523,9 +564,19 @@ struct DocumentCard: View {
                     .clipped()
             }
             .aspectRatio(0.77, contentMode: .fit)
-            Text(doc.name).font(.subheadline.weight(.medium)).lineLimit(1)
+            HStack(spacing: 5) {
+                Text(doc.name).font(.subheadline.weight(.medium)).lineLimit(1)
+                if isFavorite {
+                    Image(systemName: "star.fill")
+                        .font(.caption)
+                        .foregroundStyle(Color.mdAccent)
+                        .accessibilityHidden(true)
+                }
+            }
             Text(doc.modified, style: .date).font(.caption2).foregroundStyle(.tertiary)
         }
+        .accessibilityElement(children: .combine)
+        .accessibilityValue(isFavorite ? L10n.text("libraryMetadataFavorite") : "")
     }
 }
 

@@ -211,6 +211,7 @@ struct DocumentCanvasView: UIViewControllerRepresentable {
         vc.session = session
         session.controller = vc
         vc.open(url: url)
+        LibraryMetadataStore.shared.recordOpened(url)
         return vc
     }
 

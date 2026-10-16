@@ -68,3 +68,13 @@
 "inkPosition" = "Handwriting %ld · Near %ld pt in document";
 "inkNumber" = "Handwriting %ld";
 "orphanCount" = "Unanchored handwriting: %ld";
+"libraryMetadataAddFavorite" = "Add to Favorites";
+"libraryMetadataRemoveFavorite" = "Remove from Favorites";
+"libraryMetadataFavorite" = "Favorite";
+"libraryMetadataFavoritesOnly" = "Favorites in This Folder";
+"libraryMetadataSortRecent" = "Recently Opened";
+"libraryMetadataSortAndFilter" = "Sort and Filter";
+"libraryMetadataAllNotes" = "All Notes";
+"libraryMetadataNoFavorites" = "No Matching Favorites";
+"libraryMetadataFavoritesHint" = "Add notes to Favorites from their menu. Favorites here are limited to this folder and your search.";
+"libraryMetadataShowAll" = "Show All Notes";
