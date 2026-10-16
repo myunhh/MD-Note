@@ -106,17 +106,17 @@ final class LibraryStore: ObservableObject {
     @discardableResult
     func createNote(named name: String) -> LibraryDoc? {
         let cleaned = sanitizedNoteName(name)
-        let base = cleaned.isEmpty ? "새 노트" : cleaned
+        let base = cleaned.isEmpty ? L10n.text("newNote") : cleaned
         let url = uniqueURL(directory.appendingPathComponent(base).appendingPathExtension("md"))
         let template = "# \(url.deletingPathExtension().lastPathComponent)\n\n"
         do { try template.write(to: url, atomically: true, encoding: .utf8) }
-        catch { errorMessage = "노트를 만들지 못했어요."; return nil }
+        catch { errorMessage = L10n.text("createNoteFailed"); return nil }
         load(directory: directory)
         return makeDoc(url)
     }
 
     func createFolder(named name: String) {
-        let base = sanitized(name).isEmpty ? "새 폴더" : sanitized(name)
+        let base = sanitized(name).isEmpty ? L10n.text("newFolder") : sanitized(name)
         let url = uniqueURL(directory.appendingPathComponent(base), isDirectory: true)
         try? FileManager.default.createDirectory(at: url, withIntermediateDirectories: true)
         load(directory: directory)
@@ -206,7 +206,7 @@ final class LibraryStore: ObservableObject {
         defer { if scoped { url.stopAccessingSecurityScopedResource() } }
         let dest = uniqueURL(directory.appendingPathComponent(url.lastPathComponent))
         do { try FileManager.default.copyItem(at: url, to: dest) }
-        catch { errorMessage = "가져오기에 실패했어요: \(url.lastPathComponent)" }
+        catch { errorMessage = L10n.format("importFileFailed", url.lastPathComponent) }
         load(directory: directory)
     }
 
@@ -218,7 +218,7 @@ final class LibraryStore: ObservableObject {
         defer { if scoped { url.stopAccessingSecurityScopedResource() } }
         let dest = uniqueURL(directory.appendingPathComponent(url.lastPathComponent), isDirectory: true)
         do { try FileManager.default.copyItem(at: url, to: dest) }
-        catch { errorMessage = "폴더 가져오기에 실패했어요: \(url.lastPathComponent)" }
+        catch { errorMessage = L10n.format("importFolderFailed", url.lastPathComponent) }
         load(directory: directory)
     }
 
@@ -368,15 +368,15 @@ struct LibraryView: View {
                     Image(systemName: "doc.text.image")
                         .font(.system(size: 52, weight: .light))
                         .foregroundStyle(Color.mdAccent.gradient)
-                    Text("첫 노트를 만들어 볼까요?")
+                    Text(L10n.text("firstNote"))
                         .font(.title3.weight(.semibold))
-                    Text("마크다운을 예쁘게 펼쳐 두고 그 위에 Apple Pencil로 필기하세요.")
+                    Text(L10n.text("libraryIntro"))
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
                         .multilineTextAlignment(.center)
                         .padding(.horizontal, 44)
                     Button { askNewNote() } label: {
-                        Label("새 노트 만들기", systemImage: "plus")
+                        Label(L10n.text("createNote"), systemImage: "plus")
                     }
                     .buttonStyle(.borderedProminent)
                     .tint(.mdAccent)
@@ -393,16 +393,16 @@ struct LibraryView: View {
                         NavigationLink(value: folder) { FolderCard(folder: folder) }
                             .buttonStyle(CardButtonStyle())
                             .contextMenu {
-                                Button { askRename(folder) } label: { Label("이름 변경", systemImage: "pencil") }
-                                Button(role: .destructive) { store.delete(folder) } label: { Label("삭제", systemImage: "trash") }
+                                Button { askRename(folder) } label: { Label(L10n.text("rename"), systemImage: "pencil") }
+                                Button(role: .destructive) { store.delete(folder) } label: { Label(L10n.text("delete"), systemImage: "trash") }
                             }
                     }
                     ForEach(visibleDocuments) { doc in
                         NavigationLink(value: doc) { DocumentCard(doc: doc) }
                             .buttonStyle(CardButtonStyle())
                             .contextMenu {
-                                Button { askRename(doc) } label: { Label("이름 변경", systemImage: "pencil") }
-                                Button(role: .destructive) { store.delete(doc) } label: { Label("삭제", systemImage: "trash") }
+                                Button { askRename(doc) } label: { Label(L10n.text("rename"), systemImage: "pencil") }
+                                Button(role: .destructive) { store.delete(doc) } label: { Label(L10n.text("delete"), systemImage: "trash") }
                             }
                     }
                 }
@@ -410,44 +410,44 @@ struct LibraryView: View {
             }
         }
         .background(Color(.systemGroupedBackground))
-        .navigationTitle(isRoot ? "내 문서" : directory.lastPathComponent)
+        .navigationTitle(isRoot ? L10n.text("documents") : directory.lastPathComponent)
         .navigationBarTitleDisplayMode(isRoot ? .large : .inline)
-        .searchable(text: $searchText, prompt: "노트 검색")
+        .searchable(text: $searchText, prompt: L10n.text("searchNotes"))
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 Menu {
-                    Picker("정렬", selection: $sortOrder) {
-                        Label("최근 수정순", systemImage: "clock").tag("modified")
-                        Label("이름순", systemImage: "textformat").tag("name")
+                    Picker(L10n.text("sort"), selection: $sortOrder) {
+                        Label(L10n.text("sortModified"), systemImage: "clock").tag("modified")
+                        Label(L10n.text("sortName"), systemImage: "textformat").tag("name")
                     }
                 } label: {
                     Image(systemName: "arrow.up.arrow.down")
                 }
-                .accessibilityLabel("정렬")
+                .accessibilityLabel(L10n.text("sort"))
             }
             ToolbarItem(placement: .topBarTrailing) {
                 Menu {
-                    Button { askNewNote() } label: { Label("새 노트", systemImage: "doc.badge.plus") }
-                    Button { askNewFolder() } label: { Label("새 폴더", systemImage: "folder.badge.plus") }
+                    Button { askNewNote() } label: { Label(L10n.text("newNote"), systemImage: "doc.badge.plus") }
+                    Button { askNewFolder() } label: { Label(L10n.text("newFolder"), systemImage: "folder.badge.plus") }
                     Divider()
-                    Button { importIsFolder = false; showImporter = true } label: { Label("파일 가져오기", systemImage: "doc") }
-                    Button { importIsFolder = true; showImporter = true } label: { Label("폴더 가져오기 (이미지 포함)", systemImage: "folder") }
+                    Button { importIsFolder = false; showImporter = true } label: { Label(L10n.text("importFile"), systemImage: "doc") }
+                    Button { importIsFolder = true; showImporter = true } label: { Label(L10n.text("importFolder"), systemImage: "folder") }
                 } label: {
                     Image(systemName: "plus")
                 }
-                .accessibilityLabel("추가")
+                .accessibilityLabel(L10n.text("add"))
             }
         }
         .alert(promptTitle, isPresented: $showPrompt) {
             TextField(promptPlaceholder, text: $promptText)
-            Button("확인") { promptAction(promptText) }
-            Button("취소", role: .cancel) {}
+            Button(L10n.text("confirm")) { promptAction(promptText) }
+            Button(L10n.text("cancel"), role: .cancel) {}
         }
-        .alert("문제가 생겼어요", isPresented: Binding(
+        .alert(L10n.text("errorTitle"), isPresented: Binding(
             get: { store.errorMessage != nil },
             set: { if !$0 { store.errorMessage = nil } }
         )) {
-            Button("확인", role: .cancel) {}
+            Button(L10n.text("confirm"), role: .cancel) {}
         } message: {
             Text(store.errorMessage ?? "")
         }
@@ -477,21 +477,21 @@ struct LibraryView: View {
     }
 
     private func askNewNote() {
-        askName(title: "새 노트", placeholder: "노트 이름", initial: "") { name in
+        askName(title: L10n.text("newNote"), placeholder: L10n.text("noteName"), initial: "") { name in
             if let doc = store.createNote(named: name) { path.append(doc) }
         }
     }
 
     private func askNewFolder() {
-        askName(title: "새 폴더", placeholder: "폴더 이름", initial: "") { store.createFolder(named: $0) }
+        askName(title: L10n.text("newFolder"), placeholder: L10n.text("folderName"), initial: "") { store.createFolder(named: $0) }
     }
 
     private func askRename(_ doc: LibraryDoc) {
-        askName(title: "이름 변경", placeholder: "새 이름", initial: doc.name) { store.rename(doc, to: $0) }
+        askName(title: L10n.text("rename"), placeholder: L10n.text("newName"), initial: doc.name) { store.rename(doc, to: $0) }
     }
 
     private func askRename(_ folder: LibraryFolder) {
-        askName(title: "폴더 이름 변경", placeholder: "새 이름", initial: folder.name) { store.rename(folder, to: $0) }
+        askName(title: L10n.text("renameFolder"), placeholder: L10n.text("newName"), initial: folder.name) { store.rename(folder, to: $0) }
     }
 
     private var markdownTypes: [UTType] {
@@ -513,7 +513,7 @@ struct DocumentCard: View {
                     .fill(Color(.systemBackground))
                     .overlay(RoundedRectangle(cornerRadius: 14).stroke(.black.opacity(0.06)))
                     .shadow(color: .black.opacity(0.14), radius: 8, y: 4)
-                Text(doc.preview.isEmpty ? "빈 문서" : doc.preview)
+                Text(doc.preview.isEmpty ? L10n.text("emptyDocument") : doc.preview)
                     .font(.system(size: 10))
                     .foregroundStyle(.secondary)
                     .lineSpacing(2)
@@ -540,7 +540,7 @@ struct FolderCard: View {
             }
             .aspectRatio(0.77, contentMode: .fit)
             Text(folder.name).font(.subheadline.weight(.medium)).lineLimit(1)
-            Text("폴더").font(.caption2).foregroundStyle(.tertiary)
+            Text(L10n.text("folder")).font(.caption2).foregroundStyle(.tertiary)
         }
     }
 }

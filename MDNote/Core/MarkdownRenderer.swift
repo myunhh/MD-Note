@@ -81,7 +81,10 @@ final class MarkdownRenderer: NSObject {
 
     func render(markdown: String) async {
         let literal = Self.jsStringLiteral(markdown)
-        _ = try? await webView.evaluateJavaScript("MDNote.render(\(literal))")
+        let language = Self.jsStringLiteral(Bundle.main.preferredLocalizations.first ?? "en")
+        _ = try? await webView.evaluateJavaScript(
+            "document.documentElement.lang = \(language); MDNote.render(\(literal))"
+        )
     }
 
     /// Set the paper background style ("plain" / "ruled" / "grid" / "dots").

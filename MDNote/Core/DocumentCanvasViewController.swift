@@ -193,7 +193,7 @@ final class DocumentCanvasViewController: UIViewController {
         currentURL = url
         inkStore = InkStore(documentURL: url)
         inkStore?.onSaveFailure = { [weak self] _ in
-            self?.session?.flash("필기를 저장하지 못했어요", kind: .error, duration: 8)
+            self?.session?.flash(L10n.text("saveInkFailed"), kind: .error, duration: 8)
         }
         // Per-document paper style (falling back to the global default), resolved
         // BEFORE the first render so the initial setPaper uses the right value.
@@ -245,7 +245,7 @@ final class DocumentCanvasViewController: UIViewController {
         guard let url = currentURL, let store = inkStore else { return }
         let openURL = url
 
-        let text = (try? String(contentsOf: url, encoding: .utf8)) ?? "# 파일을 읽을 수 없습니다\n"
+        let text = (try? String(contentsOf: url, encoding: .utf8)) ?? L10n.text("readFileFailed")
         let newHash = Hashing.documentHash(text)
 
         await renderer.loadAssetsIfNeeded()
@@ -297,7 +297,7 @@ final class DocumentCanvasViewController: UIViewController {
                 }
             }
             if store.isReadOnly {
-                session?.flash("더 최신 버전에서 저장된 필기예요", duration: 6)
+                session?.flash(L10n.text("newerInk"), duration: 6)
             }
         } else {
             let result = store.applyExternalEdit(oldBlocks: currentBlocks, newBlocks: newBlocks)
@@ -434,8 +434,8 @@ final class DocumentCanvasViewController: UIViewController {
 
     private func reportReanchor(_ result: Reanchor.Result) {
         guard !(result.followed.isEmpty && result.orphaned.isEmpty) else { return }
-        var msg = "문서 변경 감지 · 필기 \(result.followed.count)개 따라옴"
-        if !result.orphaned.isEmpty { msg += " · \(result.orphaned.count)개 보관함" }
+        var msg = L10n.format("reanchored", result.followed.count)
+        if !result.orphaned.isEmpty { msg += L10n.format("orphaned", result.orphaned.count) }
         session?.flash(msg)
     }
 
@@ -647,13 +647,26 @@ final class DocumentCanvasViewController: UIViewController {
                                     animated: !UIAccessibility.isReduceMotionEnabled)
     }
 
+    func scrollToBeginning() {
+        scroll(toDocumentY: 0)
+    }
+
+    func scrollToEnd() {
+        pendingRestoreFracY = nil
+        let minY = -canvasView.adjustedContentInset.top
+        let maxY = max(minY, canvasView.contentSize.height - canvasView.bounds.height
+                       + canvasView.adjustedContentInset.bottom)
+        canvasView.setContentOffset(CGPoint(x: canvasView.contentOffset.x, y: maxY),
+                                    animated: !UIAccessibility.isReduceMotionEnabled)
+    }
+
     // MARK: PDF export
 
     func exportPDF() {
         guard let url = currentURL, !exportInFlight else { return }   // ignore re-taps mid-export
         exportInFlight = true
         let title = url.deletingPathExtension().lastPathComponent
-        session?.flash("PDF 만드는 중…", kind: .progress)   // no self-dismiss timer
+        session?.flash(L10n.text("creatingPDF"), kind: .progress)   // no self-dismiss timer
         Task { [weak self] in
             guard let self else { return }
             defer { self.exportInFlight = false }
@@ -672,7 +685,7 @@ final class DocumentCanvasViewController: UIViewController {
             } catch {
                 // Don't flash an error onto a now-different/closed document.
                 guard self.currentURL == url else { self.session?.clearStatus(); return }
-                self.session?.flash("PDF 내보내기에 실패했어요", kind: .error)
+                self.session?.flash(L10n.text("exportPDFFailed"), kind: .error)
             }
         }
     }
@@ -744,7 +757,7 @@ final class DocumentCanvasViewController: UIViewController {
             isRestoring = false
             session?.hapticImpact()
         } else {
-            session?.flash("복원할 수 없는 필기예요", kind: .error)
+            session?.flash(L10n.text("restoreInkFailed"), kind: .error)
         }
         persistAndRefresh()
     }
@@ -778,9 +791,9 @@ final class DocumentCanvasViewController: UIViewController {
             number += 1   // sequential over PRODUCED items (no gaps on decode failure)
             let label: String
             if let y = ink.lastKnownOrigin?.y {
-                label = "손글씨 \(number) · 문서 \(Int(y))pt 부근"
+                label = L10n.format("inkPosition", number, Int(y))
             } else {
-                label = "손글씨 \(number)"
+                label = L10n.format("inkNumber", number)
             }
             return OrphanItem(id: ink.id, image: image, label: label)
         }

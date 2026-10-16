@@ -1,5 +1,6 @@
 name: MDNote
 options:
+  developmentLanguage: en
   bundleIdPrefix: com.mdnote
   deploymentTarget:
     iOS: "17.0"
@@ -16,7 +17,7 @@ targets:
     sources:
       - path: MDNote/App
       - path: MDNote/Core
-      - path: MDNote/Resources/Sample.md
+      - path: MDNote/Resources/Localization
         buildPhase: resources
       - path: MDNote/Resources/Assets.xcassets
       - path: MDNote/Resources/WebAssets

@@ -78,6 +78,8 @@ final class DocumentSession: ObservableObject {
     func setTextScale(_ scale: Double) { controller?.setTextScale(scale) }
     func setFingerDrawing(_ enabled: Bool) { controller?.setFingerDrawing(enabled) }
     func scroll(to item: OutlineItem) { controller?.scroll(toDocumentY: item.y) }
+    func scrollToBeginning() { controller?.scrollToBeginning() }
+    func scrollToEnd() { controller?.scrollToEnd() }
     func exportPDF() { controller?.exportPDF() }
     func shareSource() { controller?.shareSource() }
 }
@@ -93,13 +95,13 @@ struct OrphanTrayView: View {
             Group {
                 if session.orphans.isEmpty {
                     ContentUnavailableView(
-                        "보관함이 비어 있어요",
+                        L10n.text("emptyTray"),
                         systemImage: "tray",
-                        description: Text("문서가 바뀌어 자리를 잃은 필기가 여기에 모입니다.")
+                        description: Text(L10n.text("trayDescription"))
                     )
                 } else {
                     List {
-                        Section("자리를 잃은 필기 \(session.orphans.count)개") {
+                        Section(L10n.format("orphanCount", session.orphans.count)) {
                             ForEach(session.orphans) { item in
                                 HStack(spacing: 14) {
                                     Image(uiImage: item.image)
@@ -116,13 +118,13 @@ struct OrphanTrayView: View {
                                     Button {
                                         session.restoreOrphan(item.id)
                                     } label: {
-                                        Label("복원", systemImage: "arrow.uturn.backward")
+                                        Label(L10n.text("restore"), systemImage: "arrow.uturn.backward")
                                     }
                                     .buttonStyle(.borderedProminent)
                                     Button(role: .destructive) {
                                         session.deleteOrphan(item.id)
                                     } label: {
-                                        Label("삭제", systemImage: "trash")
+                                        Label(L10n.text("delete"), systemImage: "trash")
                                     }
                                     .buttonStyle(.bordered)
                                 }
@@ -134,11 +136,11 @@ struct OrphanTrayView: View {
                     }
                 }
             }
-            .navigationTitle("보관함")
+            .navigationTitle(L10n.text("tray"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
-                    Button("닫기") { dismiss() }
+                    Button(L10n.text("close")) { dismiss() }
                 }
             }
         }

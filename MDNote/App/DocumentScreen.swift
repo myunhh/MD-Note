@@ -20,7 +20,7 @@ struct DocumentScreen: View {
                         Image(systemName: "list.bullet")
                     }
                     .disabled(session.outline.isEmpty)
-                    .accessibilityLabel("목차")
+                    .accessibilityLabel(L10n.text("outline"))
                     .popover(isPresented: $showOutline) {
                         OutlineList(session: session, dismiss: { showOutline = false })
                     }
@@ -28,22 +28,22 @@ struct DocumentScreen: View {
                         Image(systemName: "arrow.uturn.backward")
                     }
                     .disabled(!session.canUndo)
-                    .accessibilityLabel("실행 취소")
+                    .accessibilityLabel(L10n.text("undo"))
                     Button { session.redo() } label: {
                         Image(systemName: "arrow.uturn.forward")
                     }
                     .disabled(!session.canRedo)
-                    .accessibilityLabel("다시 실행")
+                    .accessibilityLabel(L10n.text("redo"))
                     Button { session.toggleTools() } label: {
                         Image(systemName: session.toolsVisible
                               ? "pencil.tip.crop.circle.fill"
                               : "pencil.tip.crop.circle")
                     }
-                    .accessibilityLabel("펜 도구")
+                    .accessibilityLabel(L10n.text("penTools"))
                     Button { showTray = true } label: {
                         Image(systemName: "tray")
                     }
-                    .accessibilityLabel(session.orphanCount > 0 ? "보관함, \(session.orphanCount)개" : "보관함")
+                    .accessibilityLabel(session.orphanCount > 0 ? L10n.format("trayCount", session.orphanCount) : L10n.text("tray"))
                     .overlay(alignment: .topTrailing) {
                         if session.orphanCount > 0 {
                             Text("\(session.orphanCount)")
@@ -56,48 +56,55 @@ struct DocumentScreen: View {
                         }
                     }
                     Menu {
-                        Picker("종이 배경", selection: Binding(
+                        Button { session.scrollToBeginning() } label: {
+                            Label(L10n.text("goToBeginning"), systemImage: "arrow.up.to.line")
+                        }
+                        Button { session.scrollToEnd() } label: {
+                            Label(L10n.text("goToEnd"), systemImage: "arrow.down.to.line")
+                        }
+                        Divider()
+                        Picker(L10n.text("paper"), selection: Binding(
                             get: { session.paperStyle },
                             set: { session.setPaper($0) }
                         )) {
-                            Text("플레인").tag("plain")
-                            Text("줄").tag("ruled")
-                            Text("모눈").tag("grid")
-                            Text("점").tag("dots")
+                            Text(L10n.text("plain")).tag("plain")
+                            Text(L10n.text("ruled")).tag("ruled")
+                            Text(L10n.text("grid")).tag("grid")
+                            Text(L10n.text("dots")).tag("dots")
                         }
-                        Picker("글자 크기", selection: Binding(
+                        Picker(L10n.text("textSize"), selection: Binding(
                             get: { session.textScale },
                             set: { session.setTextScale($0) }
                         )) {
-                            Text("작게").tag(0.85)
-                            Text("보통").tag(1.0)
-                            Text("크게").tag(1.2)
-                            Text("아주 크게").tag(1.4)
+                            Text(L10n.text("small")).tag(0.85)
+                            Text(L10n.text("medium")).tag(1.0)
+                            Text(L10n.text("large")).tag(1.2)
+                            Text(L10n.text("extraLarge")).tag(1.4)
                         }
                         Divider()
                         Toggle(isOn: Binding(
                             get: { session.fingerDrawing },
                             set: { session.setFingerDrawing($0) }
                         )) {
-                            Label("손가락으로 그리기", systemImage: "hand.draw")
+                            Label(L10n.text("fingerDrawing"), systemImage: "hand.draw")
                         }
                         Divider()
                         Button { session.shareSource() } label: {
-                            Label("노트 공유 (.md + 필기)", systemImage: "square.and.arrow.up.on.square")
+                            Label(L10n.text("shareNote"), systemImage: "square.and.arrow.up.on.square")
                         }
                         Button { session.exportPDF() } label: {
-                            Label("PDF로 내보내기", systemImage: "arrow.down.doc")
+                            Label(L10n.text("exportPDF"), systemImage: "arrow.down.doc")
                         }
                         if let s = session.docStats {
                             Section {
-                                Label("\(s.words.formatted()) 단어 · 약 \(s.minutes)분",
+                                Label(L10n.format("docStats", s.words.formatted(), s.minutes),
                                       systemImage: "textformat.size")
                             }
                         }
                     } label: {
                         Image(systemName: "ellipsis.circle")
                     }
-                    .accessibilityLabel("더 보기")
+                    .accessibilityLabel(L10n.text("more"))
                 }
             }
             .overlay(alignment: .top) {
@@ -139,24 +146,57 @@ struct DocumentScreen: View {
 struct OutlineList: View {
     @ObservedObject var session: DocumentSession
     let dismiss: () -> Void
+    @State private var searchText = ""
+
+    private var filteredOutline: [OutlineItem] {
+        let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !query.isEmpty else { return session.outline }
+        return session.outline.filter { $0.text.localizedCaseInsensitiveContains(query) }
+    }
 
     var body: some View {
-        List(session.outline) { item in
-            Button {
-                session.scroll(to: item)
-                dismiss()
-            } label: {
-                Text(item.text)
-                    .font(item.level == 1 ? .body.weight(.semibold) : .subheadline)
-                    .foregroundStyle(item.level <= 2 ? .primary : .secondary)
-                    .padding(.leading, CGFloat(item.level - 1) * 16)
-                    .lineLimit(1)
+        VStack(spacing: 0) {
+            HStack {
+                Image(systemName: "magnifyingglass").foregroundStyle(.secondary)
+                TextField(L10n.text("searchHeadings"), text: $searchText)
+                    .textInputAutocapitalization(.never)
+                    .autocorrectionDisabled()
+                    .accessibilityLabel(L10n.text("searchHeadings"))
+                if !searchText.isEmpty {
+                    Button { searchText = "" } label: {
+                        Image(systemName: "xmark.circle.fill")
+                            .foregroundStyle(.secondary)
+                            .frame(minWidth: 44, minHeight: 44)
+                    }
+                    .accessibilityLabel(L10n.text("clearSearch"))
+                }
             }
-            .accessibilityAddTraits(.isHeader)
-            .accessibilityLabel("\(item.text), 제목 수준 \(item.level)")
+            .frame(minHeight: 44)
+            .padding(.horizontal)
+            Divider()
+            List(filteredOutline) { item in
+                Button {
+                    session.scroll(to: item)
+                    dismiss()
+                } label: {
+                    Text(item.text)
+                        .font(item.level == 1 ? .body.weight(.semibold) : .subheadline)
+                        .foregroundStyle(item.level <= 2 ? .primary : .secondary)
+                        .padding(.leading, CGFloat(item.level - 1) * 16)
+                        .lineLimit(1)
+                }
+                .accessibilityAddTraits(.isHeader)
+                .accessibilityLabel(L10n.format("headingLevel", item.text, item.level))
+            }
+            .listStyle(.plain)
+            .overlay {
+                if filteredOutline.isEmpty {
+                    ContentUnavailableView(L10n.text("noHeadings"), systemImage: "magnifyingglass",
+                        description: Text(L10n.text("tryOutlineSearch")))
+                }
+            }
         }
-        .listStyle(.plain)
-        .frame(minWidth: 280, minHeight: 60, maxHeight: 420)
+        .frame(minWidth: 280, idealWidth: 360, minHeight: 240, idealHeight: 420, maxHeight: 420)
         .presentationCompactAdaptation(.popover)
     }
 }
