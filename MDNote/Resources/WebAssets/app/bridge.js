@@ -315,6 +315,21 @@
     return { words: count, minutes: Math.max(1, Math.round(count / 250)) };
   }
 
+  function imageSources(markdown) {
+    var sources = [];
+    function visit(tokens) {
+      tokens.forEach(function (token) {
+        if (token.type === "image") {
+          sources.push(token.attrGet("src") || "");
+        } else if (token.children) {
+          visit(token.children);
+        }
+      });
+    }
+    visit(md.parse(stripFrontMatter(markdown || ""), {}));
+    return sources;
+  }
+
   window.MDNote = {
     pageWidth: PAGE_WIDTH,
     render: render,
@@ -327,6 +342,7 @@
     setPaper: setPaper,
     setTextScale: setTextScale,
     stats: stats,
+    imageSources: imageSources,
   };
 
   setPaper(paperStyle);

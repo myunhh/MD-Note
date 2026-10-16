@@ -701,7 +701,12 @@ final class DocumentCanvasViewController: UIViewController {
             guard let self else { return }
             defer { self.exportInFlight = false }
             do {
-                let zip = try await Task.detached(priority: .userInitiated) { try NoteArchive.export(note: md) }.value
+                let noteData = try await Task.detached(priority: .userInitiated) { try NoteArchive.readNote(md) }.value
+                guard let markdown = String(data: noteData, encoding: .utf8) else { throw NoteArchive.Failure.damaged }
+                let sources = try await self.renderer.imageSources(markdown: markdown)
+                let zip = try await Task.detached(priority: .userInitiated) {
+                    try NoteArchive.export(note: md, noteData: noteData, imageSources: sources)
+                }.value
                 guard self.currentURL == md, self.view.window != nil else {
                     try? FileManager.default.removeItem(at: zip.deletingLastPathComponent())
                     return

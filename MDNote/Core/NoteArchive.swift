@@ -7,6 +7,13 @@ enum NoteArchive {
     static let maximumFileBytes: UInt64 = 64 * 1_024 * 1_024
     static let maximumTotalBytes: UInt64 = 256 * 1_024 * 1_024
     static let documentExtensions: Set<String> = ["md", "markdown", "mdown", "mkd", "txt"]
+    static let manifestPath = "MDNote Archive.json"
+    private static let maximumManifestBytes: UInt64 = 4 * 1_024 * 1_024
+    private struct Manifest: Codable {
+        let version: Int
+        let note: String
+        let images: [String]
+    }
 
     enum Failure: String, LocalizedError {
         case unsafePath = "archiveUnsafePath"
@@ -51,7 +58,7 @@ enum NoteArchive {
         return current
     }
 
-    /// Extract image destinations, including reference images and HTML img tags.
+    /// Conservative import validation; export uses the renderer's complete Markdown parser.
     /// Unused reference definitions are deliberately excluded from the archive.
     static func imageDestinations(in markdown: String) -> [String] {
         func matches(_ pattern: String, in text: String) -> [[String]] {
@@ -98,7 +105,6 @@ enum NoteArchive {
             let key = label(match[2].isEmpty ? match[1] : match[2])
             if let value = definitions[key] { result.append(value) }
         }
-        result += matches(#"(?i)<img\b[^>]*\bsrc\s*=\s*["']([^"']+)["'][^>]*>"#, in: visible).map { $0[1] }
         return result
     }
 
@@ -117,38 +123,64 @@ enum NoteArchive {
         return try validatedPath(relative)
     }
 
-    static func export(note: URL) throws -> URL {
-        let fm = FileManager.default
+    static func readNote(_ note: URL) throws -> Data {
         let root = note.deletingLastPathComponent().resolvingSymlinksInPath()
-        var paths: Set<String> = [try validatedPath(note.lastPathComponent)]
         let source = try regularFile(note.lastPathComponent, in: root)
         let noteSize = try source.resourceValues(forKeys: [.fileSizeKey]).fileSize ?? 0
         guard UInt64(noteSize) <= maximumFileBytes else { throw Failure.limitExceeded }
-        let markdown = try String(contentsOf: source, encoding: .utf8)
-        for destination in imageDestinations(in: markdown) {
-            if let path = try localImagePath(destination) { paths.insert(path) }
+        let data = try Data(contentsOf: source)
+        guard UInt64(data.count) <= maximumFileBytes else { throw Failure.limitExceeded }
+        return data
+    }
+
+    static func export(note: URL, noteData: Data, imageSources: [String]) throws -> URL {
+        let fm = FileManager.default
+        let root = note.deletingLastPathComponent().resolvingSymlinksInPath()
+        var paths: Set<String> = [try validatedPath(note.lastPathComponent)]
+        guard UInt64(noteData.count) <= maximumFileBytes else { throw Failure.limitExceeded }
+        var images = Set<String>()
+        for destination in imageSources {
+            if let path = try localImagePath(destination) { paths.insert(path); images.insert(path) }
         }
         for suffix in ["inknote", "bookmarks"] {
             let companion = note.appendingPathExtension(suffix)
             if fm.fileExists(atPath: companion.path) { paths.insert(try validatedPath(companion.lastPathComponent)) }
         }
-        guard paths.count <= maximumEntries else { throw Failure.limitExceeded }
+        guard !paths.contains(where: { identity($0) == identity(manifestPath) }) else { throw Failure.unsafePath }
+        guard paths.count < maximumEntries else { throw Failure.limitExceeded }
+        let manifest = try JSONEncoder().encode(Manifest(version: 1, note: note.lastPathComponent, images: images.sorted()))
         var total: UInt64 = 0
         var seen = Set<String>()
         let files = try paths.sorted().map { path -> (String, URL) in
             guard seen.insert(identity(path)).inserted else { throw Failure.unsafePath }
             let file = try regularFile(path, in: root)
-            let size = UInt64(try file.resourceValues(forKeys: [.fileSizeKey]).fileSize ?? 0)
+            let size = path == note.lastPathComponent ? UInt64(noteData.count)
+                : UInt64(try file.resourceValues(forKeys: [.fileSizeKey]).fileSize ?? 0)
             guard size <= maximumFileBytes, size <= maximumTotalBytes - total else { throw Failure.limitExceeded }
             total += size
             return (path, file)
         }
+        guard UInt64(manifest.count) <= maximumManifestBytes,
+              UInt64(manifest.count) <= maximumTotalBytes - total else { throw Failure.limitExceeded }
         let output = fm.temporaryDirectory.appendingPathComponent("mdnote-export-\(UUID().uuidString)", isDirectory: true)
         try fm.createDirectory(at: output, withIntermediateDirectories: false)
         do {
             let zip = output.appendingPathComponent(note.deletingPathExtension().lastPathComponent + ".zip")
             let archive = try Archive(url: zip, accessMode: .create)
-            for (path, file) in files { try archive.addEntry(with: path, fileURL: file, compressionMethod: .deflate) }
+            for (path, file) in files {
+                if path == note.lastPathComponent {
+                    try archive.addEntry(with: path, type: .file, uncompressedSize: Int64(noteData.count),
+                                         compressionMethod: .deflate) { position, size in
+                        noteData.subdata(in: Int(position)..<(Int(position) + size))
+                    }
+                } else {
+                    try archive.addEntry(with: path, fileURL: file, compressionMethod: .deflate)
+                }
+            }
+            try archive.addEntry(with: manifestPath, type: .file, uncompressedSize: Int64(manifest.count),
+                                 compressionMethod: .deflate) { position, size in
+                manifest.subdata(in: Int(position)..<(Int(position) + size))
+            }
             return zip
         } catch {
             try? fm.removeItem(at: output)
@@ -172,6 +204,7 @@ enum NoteArchive {
             let path = try validatedPath(entry.path, directory: entry.type == .directory)
             guard names.insert(identity(path)).inserted else { throw Failure.unsafePath }
             let size = entry.uncompressedSize
+            if path == manifestPath && size > maximumManifestBytes { throw Failure.limitExceeded }
             guard size <= maximumFileBytes, size <= maximumTotalBytes - declaredTotal else { throw Failure.limitExceeded }
             declaredTotal += size
             if entry.type == .file { fileNames.insert(identity(path)) }
@@ -212,7 +245,20 @@ enum NoteArchive {
             }
             guard actualSize == entry.uncompressedSize, checksum == entry.checksum else { throw Failure.damaged }
         }
-        for (entry, path) in entries where entry.type == .file && documentExtensions.contains((path as NSString).pathExtension.lowercased()) {
+        var manifestedNote: String?
+        if entries.contains(where: { $0.1 == manifestPath }) {
+            let manifestURL = try regularFile(manifestPath, in: staging)
+            let manifest = try JSONDecoder().decode(Manifest.self, from: Data(contentsOf: manifestURL))
+            guard manifest.version == 1, manifest.images.count < maximumEntries else { throw Failure.damaged }
+            let notePath = try validatedPath(manifest.note)
+            guard documentExtensions.contains((notePath as NSString).pathExtension.lowercased()) else { throw Failure.missingNote }
+            let note = try regularFile(notePath, in: staging)
+            for image in manifest.images {
+                _ = try regularFile(validatedPath(image), in: note.deletingLastPathComponent())
+            }
+            manifestedNote = notePath
+        }
+        for (entry, path) in entries where entry.type == .file && path != manifestedNote && documentExtensions.contains((path as NSString).pathExtension.lowercased()) {
             let note = staging.appendingPathComponent(path)
             let markdown = try String(contentsOf: note, encoding: .utf8)
             for destination in imageDestinations(in: markdown) {

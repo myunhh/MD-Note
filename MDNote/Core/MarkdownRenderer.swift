@@ -110,6 +110,15 @@ final class MarkdownRenderer: NSObject {
         assetHandler.baseDirectory = directory
     }
 
+    func imageSources(markdown: String) async throws -> [String] {
+        let value = try await webView.evaluateJavaScript(
+            "JSON.stringify(MDNote.imageSources(\(Self.jsStringLiteral(markdown))))")
+        guard let json = value as? String, let data = json.data(using: .utf8) else {
+            throw NoteArchive.Failure.damaged
+        }
+        return try JSONDecoder().decode([String].self, from: data)
+    }
+
     func contentHeight() async -> CGFloat {
         let any = (try? await webView.evaluateJavaScript("MDNote.contentHeight()")) ?? nil
         if let n = any as? NSNumber { return CGFloat(truncating: n) }

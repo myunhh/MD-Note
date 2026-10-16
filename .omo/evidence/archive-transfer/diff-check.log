@@ -1,1 +1,7 @@
+warning: in the working copy of '.omo/evidence/archive-transfer/localization.log', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of '.omo/evidence/archive-transfer/pattern-contract.log', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of '.omo/evidence/archive-transfer/report.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'MDNote/Core/NoteArchive.swift', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'Tests/ArchiveTests/NoteArchiveTests.swift', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'scripts/check-archive-contract.mjs', LF will be replaced by CRLF the next time Git touches it
 PASS: git diff --check exited 0
