@@ -1,5 +1,7 @@
 # Archive transfer implementation evidence
 
+Historical implementation record: the generic-import scanner and its regex tests described below were removed during independent review. Current behavior and verification are recorded in `../archive-review-fix-receipt.txt`: generic ZIP notes are imported without inferring required assets from Markdown; manifest-declared assets remain mandatory. Historical command output below is retained as evidence of the earlier run, not as the current acceptance claim.
+
 Scope: member F, portable source ZIP export and direct safe ZIP import. Worktree branch `team/team-7dc35eaa/F`. Product implementation and test cases are present; native compilation, XCTest execution, and iPad UI acceptance are **not verified** on this Windows host.
 
 ## Executed checks

@@ -28,10 +28,9 @@ final class NoteArchiveTests: XCTestCase {
         return url
     }
 
-    private func export(_ note: URL) throws -> URL {
+    private func export(_ note: URL, imageSources: [String]) throws -> URL {
         let data = try NoteArchive.readNote(note)
-        let text = try XCTUnwrap(String(data: data, encoding: .utf8))
-        return try NoteArchive.export(note: note, noteData: data, imageSources: NoteArchive.imageDestinations(in: text))
+        return try NoteArchive.export(note: note, noteData: data, imageSources: imageSources)
     }
 
     func testRoundTripIncludesOnlyReferencedImagesAndCompanions() throws {
@@ -41,7 +40,7 @@ final class NoteArchiveTests: XCTestCase {
         _ = try write("original/images/a b.png", "image one")
         _ = try write("original/images/c d.png", "image two")
         _ = try write("original/private.png", "private unrelated data")
-        let exported = try export(note)
+        let exported = try export(note, imageSources: ["images/a%20b.png", "images/c%20d.png", "https://example.com/image.png"])
         defer { try? FileManager.default.removeItem(at: exported.deletingLastPathComponent()) }
         let archive = try Archive(url: exported, accessMode: .read)
         XCTAssertEqual(Set(archive.map(\.path)), ["note.md", "note.md.inknote", "note.md.bookmarks", "images/a b.png", "images/c d.png", NoteArchive.manifestPath])
@@ -66,18 +65,13 @@ final class NoteArchiveTests: XCTestCase {
         XCTAssertThrowsError(try NoteArchive.localImagePath("file:///private/image.png"))
     }
 
-    func testReferenceImagesAndIgnoredHTML() {
-        let markdown = "![x](<images/space image.png> \"caption\")\n![photo][]\n![short]\n[photo]: images/ref.png\n[short]: images/short.png\n[unused]: secret.png\n<img src='images/html.png'>"
-        XCTAssertEqual(Set(NoteArchive.imageDestinations(in: markdown)), ["images/space image.png", "images/ref.png", "images/short.png"])
-    }
-
     func testRejectsParentRelativeAndSymlinkExport() throws {
         let note = try write("note.md", "![secret](../secret.png)")
-        XCTAssertThrowsError(try export(note))
+        XCTAssertThrowsError(try export(note, imageSources: ["../secret.png"]))
         try "![secret](link.png)".write(to: note, atomically: true, encoding: .utf8)
         let secret = try write("secret.png", "private")
         try FileManager.default.createSymbolicLink(at: root.appendingPathComponent("link.png"), withDestinationURL: secret)
-        XCTAssertThrowsError(try export(note))
+        XCTAssertThrowsError(try export(note, imageSources: ["link.png"]))
     }
 
     func testRejectsTraversalAndSymlinkZIPBeforePublishing() throws {
@@ -97,13 +91,10 @@ final class NoteArchiveTests: XCTestCase {
         }
     }
 
-    func testFailureCleansStagingAndRequiresNote() throws {
-        let missingImage = try zip([("note.md", Data("![x](missing.png)".utf8), .file)])
-        XCTAssertThrowsError(try NoteArchive.importZIP(missingImage, into: root))
-        XCTAssertEqual(try FileManager.default.contentsOfDirectory(atPath: root.path), ["input.zip"])
-        try FileManager.default.removeItem(at: missingImage)
+    func testGenericArchiveRequiresNote() throws {
         let noNote = try zip([("image.png", Data([1]), .file)])
         XCTAssertThrowsError(try NoteArchive.importZIP(noNote, into: root))
+        XCTAssertEqual(try FileManager.default.contentsOfDirectory(atPath: root.path), ["input.zip"])
     }
 
     func testRejectsEntryCountBomb() throws {
@@ -112,9 +103,25 @@ final class NoteArchiveTests: XCTestCase {
         XCTAssertEqual(try FileManager.default.contentsOfDirectory(atPath: root.path), ["input.zip"])
     }
 
-    func testCodeExamplesDoNotExportUnreferencedFiles() {
-        let markdown = "```md\n![x](secret.png)\n```\n`![x](private.png)`\n![real](images/real.png)"
-        XCTAssertEqual(NoteArchive.imageDestinations(in: markdown), ["images/real.png"])
+    func testGenericArchivePreservesMarkdownWithoutInferringRequiredAssets() throws {
+        let cases = [
+            "    ![example](missing.png)",
+            "\t![example](missing.png)",
+            "```md\n![example](missing.png)\n```",
+            "> ```md\n> ![example](missing.png)\n> ```",
+            "- Example:\n\n        ![example](missing.png)",
+            "![outer [inner]](missing(a(b)).png)",
+            "![real missing image](missing.png)\n![remote](https://example.com/missing.png)",
+        ]
+        for markdown in cases {
+            let bytes = Data(markdown.utf8)
+            let source = try zip([("note.md", bytes, .file)])
+            let imported = try NoteArchive.importZIP(source, into: root)
+            XCTAssertEqual(try Data(contentsOf: imported.appendingPathComponent("note.md")), bytes)
+            XCTAssertFalse(try FileManager.default.contentsOfDirectory(atPath: root.path).contains { $0.hasPrefix(".archive-import-") })
+            try FileManager.default.removeItem(at: source)
+            try FileManager.default.removeItem(at: imported)
+        }
     }
 
     func testCRCFailureCleansStaging() throws {
@@ -162,7 +169,9 @@ final class NoteArchiveTests: XCTestCase {
         for image in ["../private.png", "missing.png"] {
             let manifest = try JSONSerialization.data(withJSONObject: ["version": 1, "note": "note.md", "images": [image]])
             let source = try zip([("note.md", Data("body".utf8), .file), (NoteArchive.manifestPath, manifest, .file)])
-            XCTAssertThrowsError(try NoteArchive.importZIP(source, into: root))
+            XCTAssertThrowsError(try NoteArchive.importZIP(source, into: root)) { error in
+                XCTAssertEqual(error as? NoteArchive.Failure, image == "missing.png" ? .missingAsset : .unsafePath)
+            }
             XCTAssertEqual(try FileManager.default.contentsOfDirectory(atPath: root.path), ["input.zip"])
             try FileManager.default.removeItem(at: source)
         }

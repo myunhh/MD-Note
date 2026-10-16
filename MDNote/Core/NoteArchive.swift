@@ -58,56 +58,6 @@ enum NoteArchive {
         return current
     }
 
-    /// Conservative import validation; export uses the renderer's complete Markdown parser.
-    /// Unused reference definitions are deliberately excluded from the archive.
-    static func imageDestinations(in markdown: String) -> [String] {
-        func matches(_ pattern: String, in text: String) -> [[String]] {
-            guard let expression = try? NSRegularExpression(pattern: pattern, options: [.anchorsMatchLines]) else { return [] }
-            let source = text as NSString
-            return expression.matches(in: text, range: NSRange(location: 0, length: source.length)).map { match in
-                (0..<match.numberOfRanges).map { match.range(at: $0).location == NSNotFound ? "" : source.substring(with: match.range(at: $0)) }
-            }
-        }
-        func label(_ value: String) -> String {
-            value.split(whereSeparator: { $0.isWhitespace }).joined(separator: " ").lowercased()
-        }
-        func destination(_ value: String) -> String {
-            let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
-            if trimmed.hasPrefix("<"), let end = trimmed.firstIndex(of: ">") {
-                return String(trimmed[trimmed.index(after: trimmed.startIndex)..<end])
-            }
-            // A quoted title is not part of a local filename. Bare spaces are accepted.
-            return trimmed.replacingOccurrences(of: #"\s+["'].*["']\s*$"#, with: "", options: .regularExpression)
-        }
-        var fence: Character?
-        var fenceLength = 0
-        let visibleLines = markdown.components(separatedBy: .newlines).map { line -> String in
-            let trimmed = line.trimmingCharacters(in: .whitespaces)
-            if let first = trimmed.first, first == "`" || first == "~" {
-                let length = trimmed.prefix(while: { $0 == first }).count
-                if length >= 3 {
-                    if fence == nil { fence = first; fenceLength = length }
-                    else if fence == first && length >= fenceLength { fence = nil }
-                    return ""
-                }
-            }
-            return fence == nil ? line : ""
-        }
-        let visible = visibleLines.joined(separator: "\n")
-            .replacingOccurrences(of: #"(?s)<!--.*?-->|(`+).*?\1"#, with: "", options: .regularExpression)
-        var definitions: [String: String] = [:]
-        for match in matches(#"^ {0,3}\[([^\]]+)\]:\s*(.+)$"#, in: visible) {
-            if definitions[label(match[1])] == nil { definitions[label(match[1])] = destination(match[2]) }
-        }
-        var result = matches(#"!\[(?:\\.|[^\]\\])*\]\(\s*(<[^>]*>|(?:\\.|[^()\\\n]|\([^()\\\n]*\))*)\s*\)"#, in: visible)
-            .map { destination($0[1]) }
-        for match in matches(#"!\[([^\]]*)\](?:\[([^\]]*)\])?(?!\()"#, in: visible) {
-            let key = label(match[2].isEmpty ? match[1] : match[2])
-            if let value = definitions[key] { result.append(value) }
-        }
-        return result
-    }
-
     static func localImagePath(_ destination: String) throws -> String? {
         let raw = destination.trimmingCharacters(in: .whitespacesAndNewlines)
         if raw.hasPrefix("//") { return nil }
@@ -245,7 +195,6 @@ enum NoteArchive {
             }
             guard actualSize == entry.uncompressedSize, checksum == entry.checksum else { throw Failure.damaged }
         }
-        var manifestedNote: String?
         if entries.contains(where: { $0.1 == manifestPath }) {
             let manifestURL = try regularFile(manifestPath, in: staging)
             let manifest = try JSONDecoder().decode(Manifest.self, from: Data(contentsOf: manifestURL))
@@ -255,16 +204,6 @@ enum NoteArchive {
             let note = try regularFile(notePath, in: staging)
             for image in manifest.images {
                 _ = try regularFile(validatedPath(image), in: note.deletingLastPathComponent())
-            }
-            manifestedNote = notePath
-        }
-        for (entry, path) in entries where entry.type == .file && path != manifestedNote && documentExtensions.contains((path as NSString).pathExtension.lowercased()) {
-            let note = staging.appendingPathComponent(path)
-            let markdown = try String(contentsOf: note, encoding: .utf8)
-            for destination in imageDestinations(in: markdown) {
-                if let image = try localImagePath(destination) {
-                    _ = try regularFile(image, in: note.deletingLastPathComponent())
-                }
             }
         }
         // A fresh enclosing folder preserves all relative paths and makes commit atomic.
