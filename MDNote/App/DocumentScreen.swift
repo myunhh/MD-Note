@@ -26,6 +26,35 @@ struct DocumentScreen: View {
             }
             .toolbar {
                 ToolbarItemGroup(placement: .topBarTrailing) {
+                    Button { session.setTextEditing(!session.textEditing) } label: {
+                        Image(systemName: session.textEditing ? "keyboard.fill" : "pencil.tip")
+                    }
+                    .accessibilityLabel(L10n.text(session.textEditing ? "editor.penMode" : "editor.textMode"))
+                    Menu {
+                        Button { session.insertStudySpace(kind: "blank") } label: {
+                            Label(L10n.text("editor.blankSpace"), systemImage: "rectangle.badge.plus")
+                        }
+                        Button { session.insertStudySpace(kind: "markdown") } label: {
+                            Label(L10n.text("editor.markdownSpace"), systemImage: "text.badge.plus")
+                        }
+                        if session.textEditing {
+                            ForEach(["bold", "italic", "heading", "bullet", "numbered", "quote", "code", "paragraph", "newParagraph", "source", "studyGrow", "studyShrink", "studyUp", "studyDown", "studyRemove"], id: \.self) { command in
+                                let label = "editor." + command
+                                Button(L10n.text(label)) { session.editorCommand(command) }
+                            }
+                        }
+                        Picker(L10n.text("editor.inkBehavior"), selection: Binding(
+                            get: { session.inkBehavior },
+                            set: { session.setInkBehavior($0) }
+                        )) {
+                            Text(L10n.text("editor.rigid")).tag("rigid")
+                            Text(L10n.text("editor.underline")).tag("underline")
+                            Text(L10n.text("editor.highlight")).tag("highlight")
+                        }
+                    } label: {
+                        Image(systemName: "plus.circle")
+                    }
+                    .accessibilityLabel(L10n.text("editor.insert"))
                     Button { showOutline = true } label: {
                         Image(systemName: "list.bullet")
                     }
@@ -66,6 +95,9 @@ struct DocumentScreen: View {
                         }
                     }
                     Menu {
+                        Button { session.saveRecoveryCopy() } label: {
+                            Label(L10n.text("editor.recovery"), systemImage: "doc.on.doc")
+                        }
                         Button { showDocumentSearch = true } label: {
                             Label(L10n.text("documentSearch.title"), systemImage: "magnifyingglass")
                         }
