@@ -21,6 +21,8 @@ Rich block: default rendered content, editing contenteditable, composing, error.
 Native mode button: text/pen state with accessible name.
 Source fallback: retained rendered preview above a labeled textarea, explicit Apply
 and Cancel; preview keeps ink targets and range geometry while raw text is edited.
+Reference links/images use this fallback because their definitions live outside
+the selected block. Ordinary rich paragraphs preserve softbreak UTF-16 coordinates.
 Study controls: native menu and inline resize/move/remove controls, no new webview.
 
 ## 6. Motion & Interaction

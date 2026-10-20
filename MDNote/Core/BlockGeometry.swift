@@ -5,6 +5,7 @@ import MDNoteCore
 /// Decodes the per-block geometry that `bridge.js` (`MDNote.layout()`) returns,
 /// and converts it into the platform-agnostic `MDNoteCore.Block`.
 struct BlockGeometryDTO: Decodable {
+    let blockID: String?
     let blockHash: String
     let blockSeq: Int
     let sourceLineStart: Int
@@ -22,7 +23,8 @@ struct BlockGeometryDTO: Decodable {
             sourceLineStart: sourceLineStart,
             sourceLineEnd: sourceLineEnd,
             frame: CGRect(x: x, y: y, width: width, height: height),
-            text: text
+            text: text,
+            blockID: blockID
         )
     }
 }

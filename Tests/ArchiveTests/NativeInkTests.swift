@@ -5,6 +5,82 @@ import MDNoteCore
 
 @MainActor
 final class NativeInkTests: XCTestCase {
+    func testActualWebGeometryAdapterPreservesIdentityIntoInkCaptureAndReanchor() throws {
+        // Captured from MDNote.layout() for "Hello world\n\nTail\n" in the bundled page.
+        let json = """
+        [
+          {"blockID":"adapter-paragraph","blockHash":"2713f785a33764c7","blockSeq":0,
+           "sourceLineStart":0,"sourceLineEnd":1,"text":"Hello world","rangeText":"Hello world",
+           "rangeStartUTF16":0,"rangeEndUTF16":11,"rangeSupported":true,"studyID":null,
+           "x":90,"y":100.59375,"width":900,"height":31.5},
+          {"blockID":"adapter-tail","blockHash":"3da57fb09094b03","blockSeq":0,
+           "sourceLineStart":2,"sourceLineEnd":3,"text":"Tail","rangeText":"Tail",
+           "rangeStartUTF16":0,"rangeEndUTF16":4,"rangeSupported":true,"studyID":null,
+           "x":90,"y":144.6875,"width":900,"height":31.5}
+        ]
+        """
+        let blocks = try JSONDecoder().decode([BlockGeometryDTO].self, from: Data(json.utf8)).map(\.block)
+        XCTAssertEqual(blocks.map(\.blockID), ["adapter-paragraph", "adapter-tail"])
+        let store = InkStore(documentURL: try temporaryNote())
+        store.captureBehavior = .underline
+        store.captureAnchor = TextAnchor.capture(blockID: "adapter-paragraph", text: "Hello world",
+                                                startUTF16: 0, endUTF16: 5)
+        store.capture(drawing: PKDrawing(strokes: [stroke(x: 100, y: 120)]), blocks: blocks)
+        let original = try XCTUnwrap(store.ink.first)
+        XCTAssertEqual(original.behavior, .underline)
+        XCTAssertEqual(original.anchor?.blockID, "adapter-paragraph")
+        XCTAssertEqual(BlockSnapshot(blocks[0]).blockID, "adapter-paragraph")
+
+        let editedJSON = json.replacingOccurrences(of: "Hello world", with: "Hello world!")
+        let edited = try JSONDecoder().decode([BlockGeometryDTO].self, from: Data(editedJSON.utf8)).map(\.block)
+        store.applyTextReplacement(blockID: "adapter-paragraph", start: 11, end: 11,
+                                   replacement: "!", oldText: "Hello world", blocks: blocks)
+        store.applyExternalEdit(oldBlocks: blocks, newBlocks: edited, trustedTextRanges: true)
+        XCTAssertTrue(store.orphans.isEmpty)
+        XCTAssertEqual(store.ink.first?.anchor?.quote, "Hello")
+        XCTAssertEqual(store.ink.first?.id, original.id)
+        XCTAssertEqual(store.ink.first?.strokeData, original.strokeData)
+
+        let legacyJSON = json.replacingOccurrences(of: "\"blockID\":\"adapter-paragraph\",", with: "")
+        let legacy = try JSONDecoder().decode([BlockGeometryDTO].self, from: Data(legacyJSON.utf8))
+        XCTAssertNil(legacy[0].block.blockID)
+    }
+
+    func testActualSoftbreakEditEventDoesNotDeleteUntouchedAnnotation() throws {
+        let json = """
+        {"markdown":"First line\\nsecond line!\\n","revision":1,"composing":false,
+         "historyID":"boundary-fixture","mappings":[],
+         "edits":[{"blockID":"softbreak-target","startUTF16":22,"endUTF16":22,
+                   "insertedText":"!","oldText":"First line\\nsecond line"}]}
+        """
+        let event = try JSONDecoder().decode(EditorSnapshot.self, from: Data(json.utf8))
+        let text = "First line\nsecond line"
+        let old = block(id: "softbreak-target", text: text)
+        let store = InkStore(documentURL: try temporaryNote())
+        store.captureBehavior = .underline
+        store.captureAnchor = TextAnchor.capture(blockID: "softbreak-target", text: text,
+                                                startUTF16: 11, endUTF16: 17)
+        store.capture(drawing: PKDrawing(strokes: [stroke()]), blocks: [old])
+        let original = try XCTUnwrap(store.ink.first)
+        for edit in event.edits {
+            store.applyTextReplacement(blockID: edit.blockID, start: edit.startUTF16,
+                                       end: edit.endUTF16, replacement: edit.insertedText,
+                                       oldText: edit.oldText, blocks: [old])
+        }
+        store.applyExternalEdit(oldBlocks: [old], newBlocks: [block(id: "softbreak-target", text: text + "!")],
+                                trustedTextRanges: true)
+        XCTAssertTrue(store.orphans.isEmpty)
+        XCTAssertEqual(store.ink.first?.anchor?.blockID, "softbreak-target")
+        XCTAssertEqual(store.ink.first?.anchor?.quote, "second")
+        XCTAssertEqual(store.ink.first?.anchor?.startUTF16, 11)
+        XCTAssertEqual(store.ink.first?.anchor?.endUTF16, 17)
+        XCTAssertEqual(store.ink.first?.strokeData, original.strokeData)
+        store.applyTextReplacement(blockID: "softbreak-target", start: 11, end: 17,
+                                   replacement: "", oldText: text + "!", blocks: [old])
+        XCTAssertTrue(store.ink.isEmpty)
+        XCTAssertEqual(store.orphans.first?.id, original.id)
+    }
+
     private func temporaryNote() throws -> URL {
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)

@@ -1,21 +1,41 @@
 import { EditorState, TextSelection } from "prosemirror-state";
 import { EditorView } from "prosemirror-view";
-import { defaultMarkdownParser, defaultMarkdownSerializer, schema } from "prosemirror-markdown";
+import { defaultMarkdownParser, defaultMarkdownSerializer, MarkdownParser, schema as markdownSchema } from "prosemirror-markdown";
+import { Schema } from "prosemirror-model";
 import { baseKeymap, toggleMark, setBlockType, wrapIn } from "prosemirror-commands";
 import { history, undo, redo, undoDepth, redoDepth } from "prosemirror-history";
 import { keymap } from "prosemirror-keymap";
 import { wrapInList, splitListItem, liftListItem, sinkListItem } from "prosemirror-schema-list";
 
+// Keep the same UTF-16 text coordinates as the rendered markdown-it document.
+// The default ProseMirror softbreak handler substitutes a space.
+defaultMarkdownParser.tokenizer.core.ruler.after("inline", "mdnote_softbreak_text", state => {
+  function preserve(tokens) {
+    for (const token of tokens) {
+      if (token.type === "softbreak") { token.type = "text"; token.content = "\n"; }
+      if (token.children) preserve(token.children);
+    }
+  }
+  preserve(state.tokens);
+});
+const schema = new Schema({
+  nodes: markdownSchema.spec.nodes
+    .update("paragraph", { ...markdownSchema.spec.nodes.get("paragraph"), whitespace: "pre" })
+    .update("heading", { ...markdownSchema.spec.nodes.get("heading"), whitespace: "pre" }),
+  marks: markdownSchema.spec.marks,
+});
+const parser = new MarkdownParser(schema, defaultMarkdownParser.tokenizer, defaultMarkdownParser.tokens);
+
 // These extensions have no CommonMark schema equivalent. They remain rendered,
 // and can be deliberately edited as source without normalizing their syntax.
 export function supports(source) {
-  return !(/(^|\n)\s*\|.*\||(^|\n)\s*>?\s*\[!|(^|\n)\s*[-*+]\s+\[[ xX]\]|~~|\$|\\[([]|<\/?[A-Za-z]|\]\[[^\]]*\]|(^|\n)\s*\[[^\]]+\]:/m.test(source));
+  return !(/(^|\n)\s*\|.*\||(^|\n)\s*>?\s*\[!|(^|\n)\s*[-*+]\s+\[[ xX]\]|~~|\$|\\[([]|<\/?[A-Za-z]|\]\[[^\]]*\]|(^|\n)\s*\[[^\]]+\]:|(^|[^\\])!?\[[^\]\n]+\](?!\()/m.test(source));
 }
 
 export function create(host, source, callbacks) {
   let composing = false;
   let changed = false;
-  const doc = defaultMarkdownParser.parse(source);
+  const doc = parser.parse(source);
   const commands = {
     bold: toggleMark(schema.marks.strong),
     italic: toggleMark(schema.marks.em),

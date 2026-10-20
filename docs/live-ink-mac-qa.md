@@ -29,7 +29,7 @@ xcodebuild test -project MDNote.xcodeproj -scheme MDNote \
   > .omo/evidence/mac-live-ink/native-tests.log 2>&1
 ```
 
-Use a fresh result-bundle path on reruns. Core tests cover grapheme-safe UTF-16 mapping, duplicate targets, stable identities, v1 migration and future-version protection. `NativeInkTests` covers coordinated conflicts, invalid UTF-8, original ink bytes across reflow/recapture, partial erasure/undo, range deletion/attachment restoration, study removal/reinsertion and archive/sidecar roundtrip. These tests were authored but **not executed on Windows**.
+Use a fresh result-bundle path on reruns. Core tests cover grapheme-safe UTF-16 mapping, duplicate targets, stable identities, v1 migration and future-version protection. `NativeInkTests` covers real web-layout JSON decoding into stable blocks and ink capture/reanchor, softbreak edit-event decoding with an untouched annotation, coordinated conflicts, invalid UTF-8, original ink bytes across reflow/recapture, partial erasure/undo, range deletion/attachment restoration, study removal/reinsertion and archive/sidecar roundtrip. These tests were authored but **not executed on Windows**.
 
 ## 브라우저 회귀 검사
 
@@ -39,6 +39,7 @@ Use an installed OmO browser skill loader and Chrome. These tests create and clo
 export MDNOTE_OMOWRIGHT_LOADER='/absolute/path/to/browser/scripts/omowright.mjs'
 export MDNOTE_CHROME='/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'
 MDNOTE_EVIDENCE_DIR=.omo/evidence/mac-live-ink/editor node scripts/check-rich-editor.mjs
+MDNOTE_EVIDENCE_DIR=.omo/evidence/mac-live-ink/boundaries node scripts/check-editor-boundaries.mjs
 MDNOTE_EVIDENCE_DIR=.omo/evidence/mac-live-ink/layout node scripts/check-annotation-layout.mjs
 MDNOTE_EVIDENCE_DIR=.omo/evidence/mac-live-ink/search node scripts/check-document-search.mjs
 node MDNoteCore/Tests/parity/hash_parity.mjs
@@ -63,6 +64,7 @@ Use a disposable copy of a real note, with a local image in the same folder. Kee
 | Select a nonempty text range, choose follow-text underline/highlight, switch to pen and draw. Insert text before and inside it; test repeated identical words. | Picker shows the accepted mode. The mark follows the correct current line fragments, expands for interior edits and stays on the intended repeated occurrence. Empty selection is rejected. | Recording and sidecar anchors. |
 | Split the marked paragraph; merge it back. Delete all marked text, undo, redo, undo. | Wholly mapped ranges follow the new block; crossing ranges safely detach. Deleted ink remains in the tray; undo restores the original attachment and stroke payload. | Recording, before/after IDs and payload hashes. |
 | Open a table/math block or explicit source fallback, then cancel; repeat with Apply. | Rendered preview remains visible, existing ink does not become orphaned just from opening the editor, Cancel preserves bytes, Apply saves only explicit edits. | Screen recording and file diff. |
+| Open `Read [guide] here.` with its `[guide]: URL` definition, and a shortcut reference image. Append a character through source Apply. Edit the end of an ordinary soft-wrapped paragraph with a marked word on its second line. | Reference links/images retain their meaning and definitions. Ordinary multiline paragraphs remain rich-editable, soft line breaks survive, and the untouched marked word is not detached. | File diff, edit-event JSON and recording. |
 | Insert blank space and Markdown space after the selected block. Write in both, edit the supplement, grow/shrink, move, remove, then undo. | Real reserved height moves downstream content/ink. Space and child IDs survive editing/reopen. Removing an inked target preserves ink; undo reattaches it. | Recording, sidecar, reopen capture. |
 | Keep Pencil touching the page while an image loads or another layout update arrives. Lift Pencil, erase one stroke, undo, reflow. | No canvas replacement cancels a live stroke. Projection updates after lifting. Erased strokes stay erased until explicit undo. | Physical iPad recording. |
 | Edit the same file externally between native edits; also test a read-only/unavailable file and invalid UTF-8 copy. | Conflict/read errors are visible. External bytes remain intact; no localized error text becomes Markdown. No initial-load failure writes an empty sidecar. Recovery copy retains local edits and companion ink. | Original and recovery files plus error capture. |
