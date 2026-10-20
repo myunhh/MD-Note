@@ -21,7 +21,8 @@ public enum Reanchor {
     public static func reanchor(
         ink: [AnchoredInk],
         oldBlocks: [Block],
-        newBlocks: [Block]
+        newBlocks: [Block],
+        trustedTextRanges: Bool = false
     ) -> Result {
         var result = Result()
         for item in ink {
@@ -48,7 +49,7 @@ public enum Reanchor {
                         TextAnchor.capture(blockID: anchor.blockID, text: $0,
                                            startUTF16: anchor.startUTF16, endUTF16: anchor.endUTF16)
                     }
-                    let reconciled = unchanged && exact?.quote == anchor.quote
+                    let reconciled = (unchanged || trustedTextRanges) && exact?.quote == anchor.quote
                         ? exact : newBlock.text.flatMap { anchor.reconciled(in: $0) }
                     guard let reconciled else {
                         result.orphaned.append(stamped(item, oldBlocks: oldBlocks))

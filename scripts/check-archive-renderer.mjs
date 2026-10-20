@@ -31,5 +31,12 @@ const fixtures = [
     ["entities", "![x](images/a&amp;b.png)", ["images/a&b.png"]],
 ];
 for (const [name, markdown, expected] of fixtures) assert.deepEqual(sources(markdown), expected, name);
+assert.deepEqual(window.MDNote.composedImageSources([
+    "```md\nunfinished code",
+    "![study](study.png)",
+    "![photo][same]\n\n[same]: supplement.png",
+    "![photo][same]\n\n[same]: other.png",
+]), ["study.png", "supplement.png", "other.png"], "supplement parsing has independent fence and reference scope");
 console.log(`PASS: ${fixtures.length} fixtures execute the real bridge.imageSources and bundled markdown-it parser, including deeply nested destinations/alt text, references, code, raw HTML and front matter.`);
+console.log("PASS: composed source fragments preserve independent fence/reference scope for supplement assets.");
 console.log("LIMITATION: Native Swift/WebKit transport and ZIP roundtrip require Xcode execution.");

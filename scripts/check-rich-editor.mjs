@@ -44,22 +44,37 @@ try {
   await check("rich undo restores source", (await page.evaluate(() => MDNote.flushEditor().markdown)) === fixture);
   await page.evaluate(() => MDNote.editorCommand("redo"));
   await check("rich redo reapplies source", (await page.evaluate(() => MDNote.flushEditor().markdown)) === edited);
-  const composition = await page.evaluate(() => {
+  const composition = await page.evaluate(async () => {
     const el = document.querySelector(".ProseMirror");
     const before = editorEvents.length;
     el.dispatchEvent(new CompositionEvent("compositionstart", { bubbles: true, data: "ㅎ" }));
     let blocked = false;
     try { MDNote.flushEditor(); } catch { blocked = true; }
     const count = editorEvents.length;
+    const completed = new Promise(resolve => {
+      const listener = event => {
+        if (!event.detail.composing) {
+          removeEventListener("mdnote:editorState", listener);
+          resolve();
+        }
+      };
+      addEventListener("mdnote:editorState", listener);
+    });
     el.dispatchEvent(new CompositionEvent("compositionend", { bubbles: true, data: "한" }));
+    await completed;
     return { blocked, quiet: count === before };
   });
   await check("composition blocks flush and emits no save", composition.blocked && composition.quiet);
-  await page.evaluate(() => new Promise(resolve => setTimeout(resolve, 0)));
   await page.evaluate(() => MDNote.setTextEditing(false));
   await page.evaluate(() => MDNote.setTextEditing(true));
+  const tableIdentity = await page.evaluate(() => {
+    const table = document.querySelector("#content table");
+    return { id: table.dataset.blockId, hash: table.dataset.blockHash, text: table.dataset.blockText };
+  });
   await page.click("#content table");
   await check("unsupported table uses deliberate source fallback", await page.evaluate(() => !!document.querySelector(".source-editor textarea")));
+  await check("source fallback retains ink target identity and text", await page.evaluate(({ id, hash, text }) =>
+    MDNote.layout().some(block => block.blockID === id && block.blockHash === hash && block.text === text), tableIdentity));
   await page.click(".source-editor button:last-child");
   await check("cancel fallback preserves source", (await page.evaluate(() => MDNote.flushEditor().markdown)) === edited);
   await page.evaluate(() => { MDNote.render("First\n\nSecond", [{blockID:"first"}, {blockID:"second"}], true); MDNote.setTextEditing(true); });
@@ -164,6 +179,39 @@ try {
   await check("Delete joins next ordinary paragraph", await page.evaluate(() => MDNote.flushEditor().markdown.trim() === "FirstSecond"));
   await page.keyboard.press("Control+z");
   await check("keyboard undo restores merged paragraph identities", await page.evaluate(() => MDNote.layout().map(b => b.blockID).join(",") === "first,second"));
+  await page.evaluate(() => {
+    MDNote.setTextEditing(false);
+    MDNote.render("Target", [{ blockID: "delete-target" }], true);
+    window.beforeDeletion = MDNote.flushEditor().historyID;
+    MDNote.setTextEditing(true);
+  });
+  await page.click("#content p");
+  await page.keyboard.press("Control+a");
+  await page.keyboard.press("Backspace");
+  await check("complete target deletion emits an exact deletion map", await page.evaluate(() => {
+    const edit = editorEvents.at(-1).edits[0];
+    return edit?.blockID === "delete-target" && edit.oldText === "Target" &&
+      edit.startUTF16 === 0 && edit.endUTF16 === 6 && edit.insertedText === "";
+  }));
+  await page.evaluate(() => MDNote.editorCommand("undo"));
+  await check("delete undo restores attachment history key and block identity", await page.evaluate(() =>
+    MDNote.flushEditor().historyID === beforeDeletion && MDNote.layout()[0].blockID === "delete-target"));
+  await page.evaluate(() => {
+    MDNote.setTextEditing(false);
+    const node = document.querySelector("#content p").firstChild;
+    const range = document.createRange();
+    range.selectNodeContents(node);
+    getSelection().removeAllRanges();
+    getSelection().addRange(range);
+    window.previewAnchor = MDNote.selectedTextAnchor();
+    MDNote.setTextEditing(true);
+    MDNote.editorCommand("source");
+  });
+  await check("source preview retains follow-text range geometry", await page.evaluate(() =>
+    MDNote.rangeGeometry(previewAnchor).status === "attached" && MDNote.rangeGeometry(previewAnchor).rects.length > 0));
+  writeFileSync(join(evidence, "source-preview.png"), await page.screenshot());
+  await page.click(".source-editor button:last-child");
+  await check("cancel source preview preserves target source", await page.evaluate(() => MDNote.flushEditor().markdown === "Target"));
   writeFileSync(join(evidence, "events.json"), JSON.stringify(await page.evaluate(() => editorEvents), null, 2));
   writeFileSync(join(evidence, "results.json"), JSON.stringify(results, null, 2));
   console.log(`Rich editor browser checks passed: ${results.length}/${results.length}. Evidence: ${evidence}`);

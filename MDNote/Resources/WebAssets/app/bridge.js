@@ -292,6 +292,7 @@
       host.appendChild(button);
     });
     el.replaceWith(host);
+    host.prepend(el);
     activeEditor = { block: block, study: study, host: host, editor: {
       status: function () { return { composing: composing, canUndo: false, canRedo: false }; },
       value: function () { throw new Error("source-edit-needs-apply"); },
@@ -804,6 +805,10 @@
     return sources;
   }
 
+  function composedImageSources(fragments) {
+    return fragments.flatMap(imageSources);
+  }
+
   function applyStudies() {
     if (!window.MDNoteAnnotationLayout) return;
     var root = document.getElementById("content");
@@ -897,6 +902,7 @@
     stats: stats,
     search: search,
     imageSources: imageSources,
+    composedImageSources: composedImageSources,
     setTextEditing: setTextEditing,
     editorCommand: editorCommand,
     flushEditor: flushEditor,

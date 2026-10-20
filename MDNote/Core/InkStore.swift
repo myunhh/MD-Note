@@ -166,8 +166,9 @@ final class InkStore {
     /// Orphans record their last absolute position (from the pre-edit layout) so
     /// they can be restored near where the user last saw them.
     @discardableResult
-    func applyExternalEdit(oldBlocks: [Block], newBlocks: [Block]) -> Reanchor.Result {
-        let result = Reanchor.reanchor(ink: ink, oldBlocks: oldBlocks, newBlocks: newBlocks)
+    func applyExternalEdit(oldBlocks: [Block], newBlocks: [Block], trustedTextRanges: Bool = false) -> Reanchor.Result {
+        let result = Reanchor.reanchor(ink: ink, oldBlocks: oldBlocks, newBlocks: newBlocks,
+                                     trustedTextRanges: trustedTextRanges)
         ink = result.followed
         let stamped = result.orphaned.map { orphan -> AnchoredInk in
             var copy = orphan

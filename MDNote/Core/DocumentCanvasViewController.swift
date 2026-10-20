@@ -301,6 +301,7 @@ final class DocumentCanvasViewController: UIViewController {
         // Reentrancy guard: coalesce a burst (e.g. an external save firing while
         // the initial load is still mid-render) into one trailing reload.
         if loadInFlight { reloadPending = true; return }
+        layoutRevision += 1
         loadInFlight = true
         isLoadingDocument = true
         session?.bookmarkReady = false
@@ -400,8 +401,10 @@ final class DocumentCanvasViewController: UIViewController {
         didInitialLoad = true
         canvasView.drawingGestureRecognizer.isEnabled = !textEditing && !store.isReadOnly
 
-        await refreshInkProjection(store)
-        guard !isPencilDown else { deferredLayout = true; return }
+        guard await refreshInkProjection(store), currentURL == openURL else {
+            deferredLayout = true
+            return
+        }
         replaceCanvasDrawing(store.rebuildDrawing(blocks: newBlocks))
         attachmentHistory[editorHistoryID] = store.attachments()
 
@@ -432,7 +435,7 @@ final class DocumentCanvasViewController: UIViewController {
         let height = await renderer.contentHeight()
         let newBlocks = await renderer.blocks()
         guard (!newBlocks.isEmpty || documentText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty),
-              !isLoadingDocument, revision == layoutRevision else { return }
+              !isLoadingDocument, revision == layoutRevision, inkStore === store else { return }
         guard !isPencilDown else { deferredLayout = true; return }
 
         // A font load with no reflow fires the notification too — skip the
@@ -444,11 +447,14 @@ final class DocumentCanvasViewController: UIViewController {
         if unchanged { return }
         deferredLayout = false
 
-        let result = store.applyExternalEdit(oldBlocks: currentBlocks, newBlocks: newBlocks)
+        let result = store.applyExternalEdit(oldBlocks: currentBlocks, newBlocks: newBlocks,
+                                             trustedTextRanges: true)
         reportReanchor(result)
         store.restoreStudyTargets(in: newBlocks)
-        await refreshInkProjection(store)
-        guard revision == layoutRevision, !isPencilDown else { deferredLayout = true; return }
+        guard await refreshInkProjection(store), revision == layoutRevision else {
+            deferredLayout = true
+            return
+        }
         applyContentSize(height)
         currentBlocks = newBlocks
         replaceCanvasDrawing(store.rebuildDrawing(blocks: newBlocks))
@@ -510,6 +516,7 @@ final class DocumentCanvasViewController: UIViewController {
             view.accessibilityElements = [renderer.webView]
             return
         }
+        view.accessibilityElements = nil
         guard UIAccessibility.isVoiceOverRunning else {
             if !accessibilityBlocks.isEmpty {
                 accessibilityBlocks = []
@@ -899,8 +906,8 @@ final class DocumentCanvasViewController: UIViewController {
                 try await self.prepareForExport()
                 let noteData = try await Task.detached(priority: .userInitiated) { try NoteArchive.readNote(md) }.value
                 guard let markdown = String(data: noteData, encoding: .utf8) else { throw NoteArchive.Failure.damaged }
-                let supplements = self.inkStore?.studyInsertions.map(\.markdown).joined(separator: "\n\n") ?? ""
-                let sources = try await self.renderer.imageSources(markdown: markdown + "\n\n" + supplements)
+                let supplements = self.inkStore?.studyInsertions.map(\.markdown) ?? []
+                let sources = try await self.renderer.imageSources(fragments: [markdown] + supplements)
                 let zip = try await Task.detached(priority: .userInitiated) {
                     try NoteArchive.export(note: md, noteData: noteData, imageSources: sources)
                 }.value
@@ -953,7 +960,9 @@ final class DocumentCanvasViewController: UIViewController {
     }
 
     private func persistAndRefresh() {
-        inkStore?.save(blocks: currentBlocks, documentText: documentText)
+        if didInitialLoad, !isLoadingDocument, !markdownSaveFailed {
+            inkStore?.save(blocks: currentBlocks, documentText: documentText)
+        }
         refreshOrphans()
     }
 
@@ -1042,12 +1051,12 @@ final class DocumentCanvasViewController: UIViewController {
     // MARK: Saving
 
     private func scheduleSave() {
-        guard !markdownSaveFailed else { return }
+        guard didInitialLoad, !isLoadingDocument, !markdownSaveFailed else { return }
         saveWorkItem?.cancel()
         let work = DispatchWorkItem { [weak self] in
             guard let self else { return }
             self.saveWorkItem = nil
-            guard !self.markdownSaveFailed else { return }
+            guard self.didInitialLoad, !self.isLoadingDocument, !self.markdownSaveFailed else { return }
             self.inkStore?.save(blocks: self.currentBlocks, documentText: self.documentText)
         }
         saveWorkItem = work
@@ -1077,16 +1086,22 @@ final class DocumentCanvasViewController: UIViewController {
         isRestoring = false
     }
 
-    private func refreshInkProjection(_ store: InkStore) async {
+    private func refreshInkProjection(_ store: InkStore) async -> Bool {
+        let revision = layoutRevision
         var rects: [UUID: [CGRect]] = [:]
+        var detached: [UUID] = []
         for item in store.ink where item.behavior != .rigid {
             if let anchor = item.anchor, let geometry = await renderer.rangeGeometry(anchor), !geometry.isEmpty {
                 rects[item.id] = geometry
             } else {
-                store.detach(item.id, blocks: currentBlocks)
+                detached.append(item.id)
             }
+            guard revision == layoutRevision, inkStore === store, !isPencilDown else { return false }
         }
+        guard revision == layoutRevision, inkStore === store, !isPencilDown else { return false }
+        for id in detached { store.detach(id, blocks: currentBlocks) }
         store.rangeRects = rects
+        return true
     }
 
     private func acceptEditorSnapshot(_ snapshot: EditorSnapshot) {
@@ -1193,7 +1208,9 @@ final class DocumentCanvasViewController: UIViewController {
     }
 
     private func prepareForExport() async throws {
-        guard !isPencilDown else { throw MarkdownFileWriter.Failure.unavailable }
+        guard didInitialLoad, !isLoadingDocument, !isPencilDown else {
+            throw MarkdownFileWriter.Failure.unavailable
+        }
         let snapshot = try await renderer.flushEditor()
         acceptEditorSnapshot(snapshot)
         guard !markdownSaveFailed else { throw MarkdownFileWriter.Failure.externalConflict }
@@ -1207,7 +1224,7 @@ final class DocumentCanvasViewController: UIViewController {
     }
 
     func saveRecoveryCopy() {
-        guard let url = currentURL else { return }
+        guard didInitialLoad, !isLoadingDocument, let url = currentURL else { return }
         Task {
             do {
                 let snapshot = try await renderer.flushEditor()
@@ -1222,7 +1239,7 @@ final class DocumentCanvasViewController: UIViewController {
                                           studyInsertions: store.studyInsertions)
                     try sidecar.encoded().write(to: recovery.appendingPathExtension("inknote"), options: .withoutOverwriting)
                 }
-                session?.flash("Saved recovery copy: " + recovery.lastPathComponent, duration: 10)
+                session?.flash(L10n.format("editor.recoverySaved", recovery.lastPathComponent), duration: 10)
             } catch {
                 session?.flash(error.localizedDescription, kind: .error, duration: 10)
             }
@@ -1230,20 +1247,24 @@ final class DocumentCanvasViewController: UIViewController {
     }
 
     func setInkBehavior(_ behavior: String) {
-        guard let mode = AnnotationBehavior(rawValue: behavior), let store = inkStore else { return }
+        guard !isPencilDown, let mode = AnnotationBehavior(rawValue: behavior),
+              let store = inkStore, !store.isReadOnly else { return }
         Task {
             let anchor = await renderer.selectedTextAnchor()
-            guard mode == .rigid || anchor != nil else {
-                session?.flash("Select text before choosing a follow-text ink behavior.", duration: 8)
+            guard mode == .rigid || (anchor.map { !$0.quote.isEmpty && $0.endUTF16 > $0.startUTF16 } ?? false) else {
+                session?.flash(L10n.text("editor.selectText"), duration: 8)
                 return
             }
+            guard !isPencilDown, inkStore === store else { return }
             store.captureBehavior = mode
-            store.captureAnchor = anchor
+            store.captureAnchor = mode == .rigid ? nil : anchor
+            session?.inkBehavior = behavior
         }
     }
 
     func insertStudySpace(kind: String) {
-        guard !isPencilDown, let store = inkStore, !store.isReadOnly else { return }
+        guard didInitialLoad, !isLoadingDocument, !markdownSaveFailed,
+              !isPencilDown, let store = inkStore, !store.isReadOnly else { return }
         Task {
             let anchor = await renderer.selectedTextAnchor()
             let y = canvasView.contentOffset.y / canvasView.zoomScale
@@ -1260,6 +1281,7 @@ final class DocumentCanvasViewController: UIViewController {
             attachmentHistory[editorHistoryID] = store.attachments()
         }
         store.studyInsertions = insertions
+        guard didInitialLoad, !isLoadingDocument else { return }
         Task {
             await remeasureLayout()
             scheduleSave()

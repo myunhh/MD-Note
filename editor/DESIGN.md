@@ -19,7 +19,8 @@ New control spacing uses 8px; minimum controls use 44px hit targets.
 ## 5. Components
 Rich block: default rendered content, editing contenteditable, composing, error.
 Native mode button: text/pen state with accessible name.
-Source fallback: labeled textarea, explicit Apply and Cancel, preserves raw text.
+Source fallback: retained rendered preview above a labeled textarea, explicit Apply
+and Cancel; preview keeps ink targets and range geometry while raw text is edited.
 Study controls: native menu and inline resize/move/remove controls, no new webview.
 
 ## 6. Motion & Interaction

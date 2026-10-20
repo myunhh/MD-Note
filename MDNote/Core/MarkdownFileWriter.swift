@@ -11,9 +11,9 @@ enum MarkdownFileWriter {
         var errorDescription: String? {
             switch self {
             case .externalConflict:
-                return "This file changed outside MD Note. Your edit is still open; save a recovery copy before reopening the external version."
-            case .invalidUTF8: return "The Markdown file is not valid UTF-8."
-            case .unavailable: return "The Markdown file could not be coordinated."
+                return L10n.text("editor.externalConflict")
+            case .invalidUTF8: return L10n.text("editor.invalidUTF8")
+            case .unavailable: return L10n.text("editor.unavailable")
             }
         }
     }

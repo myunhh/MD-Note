@@ -163,3 +163,8 @@
 "editor.studyUp" = "선택한 공간 위로 이동";
 "editor.studyDown" = "선택한 공간 아래로 이동";
 "editor.studyRemove" = "선택한 공간 삭제";
+"editor.recoverySaved" = "복구 사본 저장됨: %@";
+"editor.selectText" = "텍스트를 선택한 다음 텍스트를 따라가는 잉크 동작을 선택하세요.";
+"editor.externalConflict" = "앱 밖에서 파일이 변경되었습니다. 편집 내용은 열려 있으니 복구 사본을 저장한 다음 외부 수정본을 다시 여세요.";
+"editor.invalidUTF8" = "마크다운 파일이 올바른 UTF-8 형식이 아닙니다.";
+"editor.unavailable" = "문서를 아직 저장하거나 내보낼 수 없습니다. 불러오기나 필기가 끝난 다음 다시 시도하세요.";

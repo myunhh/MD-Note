@@ -50,7 +50,8 @@ const checks = [
   }],
   ["archive includes supplement asset scan", () => {
     assert.match(controller, /studyInsertions.map\(\\\.markdown\)/);
-    assert.match(controller, /markdown \+ "\\n\\n" \+ supplements/);
+    assert.match(controller, /imageSources\(fragments: \[markdown\] \+ supplements\)/);
+    assert.match(source("MarkdownRenderer"), /MDNote.composedImageSources/);
   }],
   ["future sidecar mutation guards remain", () => {
     assert.match(store, /guard !isReadOnly, !blocks.isEmpty/);
@@ -66,6 +67,25 @@ const checks = [
     assert.equal((tests.match(/func test\w+\(/g) ?? []).length, 10);
     assert.match(tests, /testDeleteMarkedRangeThenRestoreUndoAttachment/);
     assert.match(tests, /testInkedStudyRemovalAndUndoPreservePayload/);
+  }],
+  ["incomplete load cannot schedule a sidecar save or export", () => {
+    assert.match(controller, /private func scheduleSave\(\) \{\s*guard didInitialLoad, !isLoadingDocument, !markdownSaveFailed/);
+    assert.match(controller, /private func prepareForExport\(\) async throws \{\s*guard didInitialLoad, !isLoadingDocument, !isPencilDown/);
+    assert.match(controller, /func insertStudySpace\(kind: String\) \{\s*guard didInitialLoad, !isLoadingDocument, !markdownSaveFailed/);
+  }],
+  ["ink behavior reflects an accepted nonempty selection", () => {
+    assert.match(controller, /!\$0.quote.isEmpty && \$0.endUTF16 > \$0.startUTF16/);
+    assert.match(controller, /session\?\.inkBehavior = behavior/);
+    assert.match(controller, /store.captureAnchor = mode == \.rigid \? nil : anchor/);
+  }],
+  ["live range trust is limited to remeasurement and projection publication is guarded", () => {
+    const remeasure = controller.slice(controller.indexOf("private func remeasureLayout"), controller.indexOf("private func refreshNavigationAids"));
+    assert.match(remeasure, /trustedTextRanges: true/);
+    const load = controller.slice(controller.indexOf("private func loadAndRender"), controller.indexOf("private func remeasureLayout"));
+    assert.doesNotMatch(load, /trustedTextRanges: true/);
+    const projection = controller.slice(controller.indexOf("private func refreshInkProjection"), controller.indexOf("private func acceptEditorSnapshot"));
+    assert.match(projection, /guard revision == layoutRevision, inkStore === store, !isPencilDown/);
+    assert.ok(projection.indexOf("guard revision") < projection.indexOf("store.detach"));
   }],
 ];
 for (const [name, check] of checks) {

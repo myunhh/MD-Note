@@ -4,6 +4,21 @@ import CoreGraphics
 @testable import MDNoteCore
 
 final class StableAnnotationTests: XCTestCase {
+    func testTrustedLiveMappingKeepsRepeatedQuoteWhileExternalMatchingDetaches() throws {
+        let text = String(repeating: "note ", count: 40)
+        let old = Block(hash: "old", seq: 0, text: text, blockID: "b")
+        let anchor = try XCTUnwrap(TextAnchor.capture(blockID: "b", text: text, startUTF16: 50, endUTF16: 54))
+        let mapped = try XCTUnwrap(anchor.applyingReplacement(startUTF16: 0, endUTF16: 0,
+                                                            replacement: "prefix ", oldText: text))
+        let updated = Block(hash: "new", seq: 0, text: "prefix " + text, blockID: "b")
+        let ink = AnchoredInk(blockHash: "old", blockSeq: 0, offset: .zero, size: .zero,
+                              strokeData: Data([1, 2]), blockID: "b", anchor: mapped, behavior: .highlight)
+        let live = Reanchor.reanchor(ink: [ink], oldBlocks: [old], newBlocks: [updated], trustedTextRanges: true)
+        XCTAssertEqual(live.followed.first?.anchor, mapped)
+        XCTAssertTrue(live.orphaned.isEmpty)
+        XCTAssertEqual(Reanchor.reanchor(ink: [ink], oldBlocks: [old], newBlocks: [updated]).orphaned.count, 1)
+    }
+
     func testExplicitSplitMergeMappingAndUndoUseOriginalRange() throws {
         let anchor = try XCTUnwrap(TextAnchor.capture(blockID: "original", text: "left right",
                                                      startUTF16: 5, endUTF16: 10))

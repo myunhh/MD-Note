@@ -163,3 +163,8 @@
 "editor.studyUp" = "Move selected space up";
 "editor.studyDown" = "Move selected space down";
 "editor.studyRemove" = "Remove selected space";
+"editor.recoverySaved" = "Saved recovery copy: %@";
+"editor.selectText" = "Select text before choosing a follow-text ink behavior.";
+"editor.externalConflict" = "This file changed outside MD Note. Your edit is still open; save a recovery copy before reopening the external version.";
+"editor.invalidUTF8" = "The Markdown file is not valid UTF-8.";
+"editor.unavailable" = "The document is not ready to save or export. Wait for loading or drawing to finish and try again.";

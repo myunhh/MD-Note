@@ -212,8 +212,16 @@ final class MarkdownRenderer: NSObject {
     }
 
     func imageSources(markdown: String) async throws -> [String] {
+        try await imageSources(fragments: [markdown])
+    }
+
+    func imageSources(fragments: [String]) async throws -> [String] {
+        let encoded = try JSONEncoder().encode(fragments)
+        guard let argument = String(data: encoded, encoding: .utf8) else {
+            throw NoteArchive.Failure.damaged
+        }
         let value = try await webView.evaluateJavaScript(
-            "JSON.stringify(MDNote.imageSources(\(Self.jsStringLiteral(markdown))))")
+            "JSON.stringify(MDNote.composedImageSources(\(argument)))")
         guard let json = value as? String, let data = json.data(using: .utf8) else {
             throw NoteArchive.Failure.damaged
         }
