@@ -4,10 +4,11 @@ import CoreGraphics
 /// A rendered markdown block (paragraph, heading, list item, code block, …)
 /// together with its on-screen geometry in *document coordinates*.
 ///
-/// `hash` + `seq` form the stable identity used to anchor ink:
+/// `blockID` is the persistent editor identity. Legacy content references use:
 ///   - `hash` is the normalized content hash (see `Hashing.blockHash`)
 ///   - `seq` disambiguates blocks with identical content (0-based occurrence)
 public struct Block: Codable, Equatable, Sendable {
+    public var blockID: String?
     public var hash: String
     public var seq: Int
     public var sourceLineStart: Int
@@ -24,7 +25,8 @@ public struct Block: Codable, Equatable, Sendable {
         sourceLineStart: Int = 0,
         sourceLineEnd: Int = 0,
         frame: CGRect = .zero,
-        text: String? = nil
+        text: String? = nil,
+        blockID: String? = nil
     ) {
         self.hash = hash
         self.seq = seq
@@ -32,6 +34,7 @@ public struct Block: Codable, Equatable, Sendable {
         self.sourceLineEnd = sourceLineEnd
         self.frame = frame
         self.text = text
+        self.blockID = blockID
     }
 }
 

@@ -8,6 +8,9 @@ import CoreGraphics
 /// lives relative to its anchor block, never about its visual content.
 public struct AnchoredInk: Codable, Equatable, Identifiable, Sendable {
     public var id: UUID
+    public var blockID: String?
+    public var anchor: TextAnchor?
+    public var behavior: AnnotationBehavior
     /// Identity of the anchor block.
     public var blockHash: String
     public var blockSeq: Int
@@ -30,7 +33,10 @@ public struct AnchoredInk: Codable, Equatable, Identifiable, Sendable {
         offset: CGPoint,
         size: CGSize,
         strokeData: Data,
-        lastKnownOrigin: CGPoint? = nil
+        lastKnownOrigin: CGPoint? = nil,
+        blockID: String? = nil,
+        anchor: TextAnchor? = nil,
+        behavior: AnnotationBehavior = .rigid
     ) {
         self.id = id
         self.blockHash = blockHash
@@ -39,13 +45,40 @@ public struct AnchoredInk: Codable, Equatable, Identifiable, Sendable {
         self.size = size
         self.strokeData = strokeData
         self.lastKnownOrigin = lastKnownOrigin
+        self.blockID = blockID
+        self.anchor = anchor
+        self.behavior = behavior
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case id, blockHash, blockSeq, offset, size, strokeData, lastKnownOrigin, blockID, anchor, behavior
+    }
+
+    public init(from decoder: Decoder) throws {
+        let values = try decoder.container(keyedBy: CodingKeys.self)
+        id = try values.decode(UUID.self, forKey: .id)
+        blockHash = try values.decode(String.self, forKey: .blockHash)
+        blockSeq = try values.decode(Int.self, forKey: .blockSeq)
+        offset = try values.decode(CGPoint.self, forKey: .offset)
+        size = try values.decode(CGSize.self, forKey: .size)
+        strokeData = try values.decode(Data.self, forKey: .strokeData)
+        lastKnownOrigin = try values.decodeIfPresent(CGPoint.self, forKey: .lastKnownOrigin)
+        blockID = try values.decodeIfPresent(String.self, forKey: .blockID)
+        anchor = try values.decodeIfPresent(TextAnchor.self, forKey: .anchor)
+        behavior = try values.decodeIfPresent(AnnotationBehavior.self, forKey: .behavior) ?? .rigid
     }
 
     /// Resolve the absolute document-coordinate origin of this ink given the
     /// current block layout. Returns nil if the anchor block is absent
     /// (i.e. the ink is orphaned).
     public func resolvedOrigin(in blocks: [Block]) -> CGPoint? {
-        guard let block = blocks.block(hash: blockHash, seq: blockSeq) else { return nil }
+        let candidates: [Block]
+        if let stableID = anchor?.blockID ?? blockID {
+            candidates = blocks.filter { $0.blockID == stableID }
+        } else {
+            candidates = blocks.filter { $0.hash == blockHash && $0.seq == blockSeq }
+        }
+        guard candidates.count == 1, let block = candidates.first else { return nil }
         return CGPoint(x: block.frame.origin.x + offset.x,
                        y: block.frame.origin.y + offset.y)
     }

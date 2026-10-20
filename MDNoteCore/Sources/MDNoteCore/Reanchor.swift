@@ -2,12 +2,8 @@ import Foundation
 
 /// Re-attaches ink to blocks after an external markdown edit.
 ///
-/// Strategy (never destructive):
-///   - If an ink item's anchor block still exists (matched via LCS), the ink is
-///     *followed*: its anchor is updated to the new block's occurrence index so
-///     it resolves to the block's new position. Relative offset is preserved.
-///   - If the anchor block disappeared, the ink is *orphaned* — kept aside for
-///     the user to re-attach or delete, never silently removed.
+/// Stable IDs take precedence. Legacy external matching requires unique exact
+/// content on both sides; identical paragraphs cannot be disambiguated by order.
 public enum Reanchor {
 
     public struct Result: Equatable, Sendable {
@@ -27,55 +23,43 @@ public enum Reanchor {
         oldBlocks: [Block],
         newBlocks: [Block]
     ) -> Result {
-        let pairs = BlockMatcher.match(old: oldBlocks, new: newBlocks)
-
-        // Map a surviving old block identity -> its new identity.
-        // Key: "hash#seq" of the OLD block. Value: the matched NEW block.
-        var survivors: [String: Block] = [:]
-        var matchedOld = Set<Int>()
-        var matchedNew = Set<Int>()
-        for pair in pairs {
-            let oldB = oldBlocks[pair.oldIndex]
-            let newB = newBlocks[pair.newIndex]
-            survivors[key(oldB.hash, oldB.seq)] = newB
-            matchedOld.insert(pair.oldIndex)
-            matchedNew.insert(pair.newIndex)
-        }
-
-        // Second pass: a block MOVED elsewhere in the document falls off the
-        // LCS (which only matches in-order subsequences) even though identical
-        // content survives. Pair the leftover old/new blocks that share a hash,
-        // in document order, so ink follows a relocated section instead of
-        // orphaning.
-        var movedTargets: [String: [Int]] = [:]
-        for (index, block) in newBlocks.enumerated() where !matchedNew.contains(index) {
-            movedTargets[block.hash, default: []].append(index)
-        }
-        for (index, oldB) in oldBlocks.enumerated() where !matchedOld.contains(index) {
-            guard let targets = movedTargets[oldB.hash], !targets.isEmpty else { continue }
-            // Pick the surviving duplicate NEAREST in source order rather than
-            // the first in document order: deleting one of several identical
-            // blocks must not fling its ink to an unrelated copy in a distant
-            // section. Tie-break on the smaller new index for determinism.
-            let pick = targets.min { a, b in
-                let da = abs(newBlocks[a].sourceLineStart - oldB.sourceLineStart)
-                let db = abs(newBlocks[b].sourceLineStart - oldB.sourceLineStart)
-                return da != db ? da < db : a < b
-            }!
-            survivors[key(oldB.hash, oldB.seq)] = newBlocks[pick]
-            movedTargets[oldB.hash] = targets.filter { $0 != pick }
-        }
-
         var result = Result()
         for item in ink {
-            if let newBlock = survivors[key(item.blockHash, item.blockSeq)] {
+            let target: Block?
+            if let stableID = item.anchor?.blockID ?? item.blockID {
+                let candidates = newBlocks.filter { $0.blockID == stableID }
+                target = candidates.count == 1 ? candidates[0] : nil
+            } else {
+                let oldMatches = oldBlocks.filter { $0.hash == item.blockHash }
+                let candidates = newBlocks.filter {
+                    $0.hash == item.blockHash && $0.text == oldMatches.first?.text
+                }
+                target = oldMatches.count == 1 && candidates.count == 1 ? candidates[0] : nil
+            }
+            if let newBlock = target {
                 var moved = item
-                // hash is identical for an LCS match; only the occurrence index
-                // can shift when duplicates are inserted/removed above it.
+                moved.blockID = newBlock.blockID
+                moved.blockHash = newBlock.hash
                 moved.blockSeq = newBlock.seq
+                if let anchor = item.anchor, item.behavior != .rigid {
+                    let oldTargets = oldBlocks.filter { $0.blockID == anchor.blockID }
+                    let unchanged = oldTargets.count == 1 && oldTargets[0].text == newBlock.text
+                    let exact = newBlock.text.flatMap {
+                        TextAnchor.capture(blockID: anchor.blockID, text: $0,
+                                           startUTF16: anchor.startUTF16, endUTF16: anchor.endUTF16)
+                    }
+                    let reconciled = unchanged && exact?.quote == anchor.quote
+                        ? exact : newBlock.text.flatMap { anchor.reconciled(in: $0) }
+                    guard let reconciled else {
+                        result.orphaned.append(stamped(item, oldBlocks: oldBlocks))
+                        continue
+                    }
+                    moved.anchor = reconciled
+                }
+                moved.lastKnownOrigin = nil
                 result.followed.append(moved)
             } else {
-                result.orphaned.append(item)
+                result.orphaned.append(stamped(item, oldBlocks: oldBlocks))
             }
         }
         return result
@@ -101,5 +85,11 @@ public enum Reanchor {
         return (best.0, best.1)
     }
 
-    private static func key(_ hash: String, _ seq: Int) -> String { "\(hash)#\(seq)" }
+    private static func stamped(_ item: AnchoredInk, oldBlocks: [Block]) -> AnchoredInk {
+        var result = item
+        if result.lastKnownOrigin == nil {
+            result.lastKnownOrigin = item.resolvedOrigin(in: oldBlocks)
+        }
+        return result
+    }
 }

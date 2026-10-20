@@ -1,0 +1,21 @@
+Exit: 0
+ MDNoteCore/Sources/MDNoteCore/AnchoredInk.swift    | 37 +++++++++-
+ MDNoteCore/Sources/MDNoteCore/Block.swift          |  7 +-
+ MDNoteCore/Sources/MDNoteCore/Reanchor.swift       | 82 +++++++++-------------
+ MDNoteCore/Sources/MDNoteCore/Sidecar.swift        | 58 +++++++++++++--
+ .../Tests/MDNoteCoreTests/ReanchorTests.swift      | 51 +++++---------
+ 5 files changed, 142 insertions(+), 93 deletions(-)
+Swift available: False
+ M MDNoteCore/Sources/MDNoteCore/AnchoredInk.swift
+ M MDNoteCore/Sources/MDNoteCore/Block.swift
+ M MDNoteCore/Sources/MDNoteCore/Reanchor.swift
+ M MDNoteCore/Sources/MDNoteCore/Sidecar.swift
+ M MDNoteCore/Tests/MDNoteCoreTests/ReanchorTests.swift
+?? .omo/evidence/annotation-core/
+?? MDNoteCore/Sources/MDNoteCore/StableBlockIdentity.swift
+?? MDNoteCore/Sources/MDNoteCore/StudyInsertion.swift
+?? MDNoteCore/Sources/MDNoteCore/TextAnchor.swift
+?? MDNoteCore/Tests/Fixtures/
+?? MDNoteCore/Tests/MDNoteCoreTests/StableAnnotationTests.swift
+?? MDNoteCore/Tests/parity/anchor_fixture_check.mjs
+mdnote-live-ink/annotation-core

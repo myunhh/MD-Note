@@ -1,0 +1,24 @@
+Staged diff check exit: 0
+ .../annotation-core/environment-and-diff.log       |  21 +++
+ .omo/evidence/annotation-core/hash-parity.log      |   2 +
+ .omo/evidence/annotation-core/loop-status.log      |   8 +
+ .omo/evidence/annotation-core/npm-audit.log        |   6 +
+ .omo/evidence/annotation-core/report.md            |  64 +++++++
+ .omo/evidence/annotation-core/unicode-fixtures.log |   3 +
+ MDNoteCore/Sources/MDNoteCore/AnchoredInk.swift    |  37 +++-
+ MDNoteCore/Sources/MDNoteCore/Block.swift          |   7 +-
+ MDNoteCore/Sources/MDNoteCore/Reanchor.swift       |  90 +++++-----
+ MDNoteCore/Sources/MDNoteCore/Sidecar.swift        |  58 +++++-
+ .../Sources/MDNoteCore/StableBlockIdentity.swift   |  35 ++++
+ MDNoteCore/Sources/MDNoteCore/StudyInsertion.swift |  70 ++++++++
+ MDNoteCore/Sources/MDNoteCore/TextAnchor.swift     | 104 +++++++++++
+ MDNoteCore/Tests/Fixtures/anchor-utf16.json        |   6 +
+ .../Tests/MDNoteCoreTests/ReanchorTests.swift      |  51 ++----
+ .../MDNoteCoreTests/StableAnnotationTests.swift    | 197 +++++++++++++++++++++
+ MDNoteCore/Tests/parity/anchor_fixture_check.mjs   |  20 +++
+ 17 files changed, 686 insertions(+), 93 deletions(-)
+PASS: 4 shared Unicode fixtures, 31 UTF16 boundary assertions using Intl.Segmenter.
+Swift implementation is checked by StableAnnotationTests.testSharedUTF16Fixtures on macOS; this invocation does not execute Swift.
+Unicode exit: 0
+hash parity OK: 8/8 cases match Swift golden values.
+Hash parity exit: 0
