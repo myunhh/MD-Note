@@ -1,0 +1,3 @@
+swift unavailable on this Windows host
+xcodebuild unavailable on this Windows host
+sourcekit-lsp unavailable on this Windows host

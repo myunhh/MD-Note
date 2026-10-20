@@ -1,0 +1,13 @@
+PASS static contract: save comparison is inside coordinated accessor
+PASS static contract: read errors cannot become document text
+PASS static contract: self-save baseline advances only after coordinated write
+PASS static contract: original ink and stable identities survive recapture
+PASS static contract: range projection is separate from original payload
+PASS static contract: Pencil-down checks guard loading, layout and replacement
+PASS static contract: native edit maps and undo attachments wired
+PASS static contract: study persistence and shared editor undo wired
+PASS static contract: archive includes supplement asset scan
+PASS static contract: future sidecar mutation guards remain
+PASS static contract: text input preserves existing canvas
+PASS static contract: native regression scenarios are present
+PASS 12 source contract checks. LIMITATION: no Swift/UIKit/PencilKit runtime execution; native XCTest and iPad acceptance are required.

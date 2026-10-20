@@ -15,6 +15,8 @@ enum DocumentExporter {
 
     enum ExportError: Error {
         case webRenderFailed
+        case invalidGeometry
+        case documentTooLong
     }
 
     /// PDF page dimensions are capped (~200in / 14400pt). WKWebView.pdf() clips a
@@ -29,12 +31,17 @@ enum DocumentExporter {
         contentHeight: CGFloat,
         title: String
     ) async throws -> URL {
+        guard pageWidth.isFinite, pageWidth > 0, contentHeight.isFinite, contentHeight >= 0 else {
+            throw ExportError.invalidGeometry
+        }
         let pageHeight = (pageWidth * 2.0.squareRoot()).rounded()   // A-series ratio
         let pageBounds = CGRect(x: 0, y: 0, width: pageWidth, height: pageHeight)
         // Ink can extend below the web layer (the user can write in the bottom
         // writing margin past the last block), so size the export to cover it.
         let inkMaxY = drawing.bounds.isNull ? 0 : drawing.bounds.maxY
         let exportHeight = max(contentHeight, inkMaxY)
+        guard exportHeight.isFinite else { throw ExportError.invalidGeometry }
+        guard ceil(exportHeight / pageHeight) <= 500 else { throw ExportError.documentTooLong }
         // Cap pages so a single stray far-down stroke can't balloon the PDF.
         let pageCount = max(1, min(Int(ceil(exportHeight / pageHeight)), 500))
 

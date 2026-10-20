@@ -5,15 +5,19 @@ import MDNoteCore
 /// Bridges PencilKit drawings to/from `MDNoteCore` block anchors and persists
 /// them in a `<name>.md.inknote` sidecar.
 ///
-/// Storage model: ink is grouped per block. Each `AnchoredInk` holds the block's
-/// strokes in **block-relative coordinates** (the stroke data is translated by
-/// `-blockOrigin` at capture time). Rendering translates back by the block's
-/// *current* origin — so when the block moves, the ink follows.
+/// Original strokes stay block-relative; display projections never replace them.
 @MainActor
 final class InkStore {
     private(set) var documentURL: URL
     private(set) var ink: [AnchoredInk] = []
     private(set) var orphans: [AnchoredInk] = []
+    var studyInsertions: [StudyInsertion] = []
+    var captureBehavior: AnnotationBehavior = .rigid
+    var captureAnchor: TextAnchor?
+    var rangeRects: [UUID: [CGRect]] = [:]
+    private var renderedSources: [Data: (UUID, Int)] = [:]
+    private var originals: [UUID: AnchoredInk] = [:]
+    private var renderedCounts: [UUID: Int] = [:]
     var layoutWidth: CGFloat = 1390
 
     /// Set when load() found a sidecar written by a NEWER app version. Its bytes
@@ -43,52 +47,114 @@ final class InkStore {
 
     // MARK: Capture (PencilKit -> anchors)
 
-    /// Re-derive per-block ink groups from the full live drawing.
     func capture(drawing: PKDrawing, blocks: [Block]) {
-        guard !blocks.isEmpty else { return }
-        let byKey = Dictionary(blocks.map { (Self.key($0), $0) }, uniquingKeysWith: { a, _ in a })
+        guard !isReadOnly, !blocks.isEmpty else { return }
+        for item in ink { rememberOriginal(item) }
         var grouped: [String: [PKStroke]] = [:]
+        var retained: [UUID: Set<Int>] = [:]
         for stroke in drawing.strokes {
-            guard let block = Self.anchorBlock(for: stroke.renderBounds, in: blocks) else { continue }
-            grouped[Self.key(block), default: []].append(stroke)
+            let signature = InkStrokeIdentity.fingerprint(stroke)
+            if let (id, index) = renderedSources[signature], originals[id] != nil {
+                retained[id, default: []].insert(index)
+                continue
+            }
+            guard let block = captureAnchor.flatMap({ anchor in blocks.first { $0.blockID == anchor.blockID } })
+                ?? Self.anchorBlock(for: stroke.renderBounds, in: blocks) else { continue }
+            grouped[block.blockID ?? Self.key(block), default: []].append(stroke)
         }
 
         var items: [AnchoredInk] = []
+        for (id, indices) in retained {
+            guard !orphans.contains(where: { $0.id == id }) else { continue }
+            guard var item = originals[id],
+                  let original = try? PKDrawing(data: item.strokeData) else { continue }
+            if item.behavior != .rigid, indices.count < (renderedCounts[id] ?? indices.count) { continue }
+            if item.behavior == .rigid && indices.count != original.strokes.count {
+                let remaining = original.strokes.enumerated().compactMap { indices.contains($0.offset) ? $0.element : nil }
+                let partial = PKDrawing(strokes: remaining)
+                item.strokeData = partial.dataRepresentation()
+                item.offset = Self.finite(partial.bounds.origin)
+                item.size = Self.finite(partial.bounds.size)
+            }
+            items.append(item)
+        }
+        let byKey = Dictionary(blocks.map { ($0.blockID ?? Self.key($0), $0) }, uniquingKeysWith: { a, _ in a })
         for (key, strokes) in grouped {
             guard let block = byKey[key] else { continue }
             let origin = block.frame.origin
             let relative = PKDrawing(strokes: strokes)
                 .transformed(using: CGAffineTransform(translationX: -origin.x, y: -origin.y))
-            items.append(AnchoredInk(
+            var item = AnchoredInk(
                 blockHash: block.hash,
                 blockSeq: block.seq,
                 offset: Self.finite(relative.bounds.origin),
                 size: Self.finite(relative.bounds.size),
                 strokeData: relative.dataRepresentation()
-            ))
+            )
+            item.blockID = block.blockID
+            if let anchor = captureAnchor, anchor.blockID == block.blockID {
+                item.anchor = anchor
+                item.behavior = captureBehavior
+            }
+            items.append(item)
+            originals[item.id] = item
+            for (index, stroke) in strokes.enumerated() {
+                renderedSources[InkStrokeIdentity.fingerprint(stroke)] = (item.id, index)
+            }
+            renderedCounts[item.id] = strokes.count
         }
 
         // Ink anchored to a block that's absent from the current layout never
         // made it into the live drawing (rebuildDrawing skips it), so the
         // re-derivation above can't see it. Carry it forward instead of
         // silently dropping it.
-        let liveKeys = Set(blocks.map(Self.key))
-        let unresolved = ink.filter { !liveKeys.contains("\($0.blockHash)#\($0.blockSeq)") }
-        ink = items + unresolved
+        let unresolved = ink.filter { Self.resolve($0, in: blocks) == nil }
+        ink = items + unresolved.filter { missing in !items.contains(where: { $0.id == missing.id }) }
     }
 
     // MARK: Render (anchors -> PencilKit)
 
     /// Reconstruct the full drawing for the given (current) block layout.
     func rebuildDrawing(blocks: [Block]) -> PKDrawing {
-        let byKey = Dictionary(blocks.map { (Self.key($0), $0) }, uniquingKeysWith: { a, _ in a })
         var strokes: [PKStroke] = []
         for item in ink {
-            guard let block = byKey["\(item.blockHash)#\(item.blockSeq)"],
+            rememberOriginal(item)
+            guard let block = Self.resolve(item, in: blocks),
                   let relative = try? PKDrawing(data: item.strokeData) else { continue }
-            let placed = relative.transformed(
-                using: CGAffineTransform(translationX: block.frame.origin.x, y: block.frame.origin.y))
-            strokes.append(contentsOf: placed.strokes)
+            let placed: PKDrawing
+            if item.behavior != .rigid, let rects = rangeRects[item.id], !rects.isEmpty,
+               let sample = relative.strokes.first {
+                let fragments = rects.map { rect -> PKStroke in
+                    let y = item.behavior == .underline ? rect.maxY : rect.midY
+                    let width = item.behavior == .underline ? max(1, sample.path.first?.size.height ?? 2) : rect.height
+                    let points = [rect.minX, rect.maxX].enumerated().map { index, x in
+                        PKStrokePoint(location: CGPoint(x: x, y: y), timeOffset: Double(index) * 0.01,
+                                      size: CGSize(width: width, height: width),
+                                      opacity: item.behavior == .highlight ? 0.25 : 1,
+                                      force: 1, azimuth: 0, altitude: .pi / 2)
+                    }
+                    let path = PKStrokePath(controlPoints: points, creationDate: sample.path.creationDate)
+                    return PKStroke(ink: sample.ink, path: path)
+                }
+                placed = PKDrawing(strokes: fragments)
+            } else {
+                placed = relative.transformed(
+                    using: CGAffineTransform(translationX: block.frame.origin.x, y: block.frame.origin.y))
+            }
+            let archived = originals[item.id].flatMap { try? PKDrawing(data: $0.strokeData) }
+            for (index, stroke) in placed.strokes.enumerated() {
+                let fingerprint = InkStrokeIdentity.fingerprint(stroke)
+                var originalIndex = index
+                if item.behavior == .rigid, index < relative.strokes.count {
+                    let relativeID = InkStrokeIdentity.fingerprint(relative.strokes[index])
+                    originalIndex = archived?.strokes.firstIndex(where: {
+                        InkStrokeIdentity.fingerprint($0) == relativeID
+                    }) ?? index
+                }
+                renderedSources[fingerprint] = (item.id, originalIndex)
+                strokes.append(stroke)
+            }
+            renderedCounts[item.id] = placed.strokes.count
         }
         return PKDrawing(strokes: strokes)
     }
@@ -116,14 +182,22 @@ final class InkStore {
 
     /// Permanently remove an orphan.
     func removeOrphan(_ id: UUID) {
+        guard !isReadOnly else { return }
         orphans.removeAll { $0.id == id }
+    }
+
+    func detach(_ id: UUID, blocks: [Block]) {
+        guard let index = ink.firstIndex(where: { $0.id == id }) else { return }
+        var item = ink.remove(at: index)
+        item.lastKnownOrigin = item.resolvedOrigin(in: blocks)
+        orphans.append(item)
     }
 
     /// Re-attach an orphan to the current block nearest its last known position,
     /// keeping it visually where the user last saw it.
     @discardableResult
     func restoreOrphan(_ id: UUID, in blocks: [Block]) -> Bool {
-        guard let index = orphans.firstIndex(where: { $0.id == id }), !blocks.isEmpty else { return false }
+        guard !isReadOnly, let index = orphans.firstIndex(where: { $0.id == id }), !blocks.isEmpty else { return false }
         var item = orphans.remove(at: index)
 
         // Fail safe: require a real last position AND a decodable payload before
@@ -146,7 +220,11 @@ final class InkStore {
         item.size = Self.finite(shifted.bounds.size)
         item.blockHash = target.hash
         item.blockSeq = target.seq
+        item.blockID = target.blockID
+        item.anchor = nil
+        item.behavior = .rigid
         item.lastKnownOrigin = nil
+        originals[item.id] = item
         ink.append(item)
         return true
     }
@@ -163,7 +241,8 @@ final class InkStore {
             blocks: blocks.map(BlockSnapshot.init),
             ink: ink,
             orphans: orphans,
-            appVersion: Self.appVersion
+            appVersion: Self.appVersion,
+            studyInsertions: studyInsertions
         )
         let data: Data
         do { data = try sidecar.encoded() }
@@ -205,14 +284,20 @@ final class InkStore {
             catch { decodeError = error }
         }
         if let loaded {
+            renderedSources = [:]
+            renderedCounts = [:]
+            originals = [:]
             ink = loaded.ink
             orphans = loaded.orphans
             layoutWidth = loaded.layoutWidth
+            studyInsertions = loaded.studyInsertions
         } else if let sidecarError = decodeError as? SidecarError {
             // Written by a newer build — the bytes are FINE, just unreadable by
             // this schema. Go read-only so we never overwrite it; no .corrupt
             // backup (nothing is corrupt).
-            switch sidecarError { case .newerVersion: isReadOnly = true }
+            switch sidecarError {
+            case .newerVersion, .unsupportedVersion: isReadOnly = true
+            }
         } else if hadData {
             // Genuinely undecodable. Preserve the bytes under a UNIQUE name so a
             // later corruption can't overwrite this evidence.
@@ -285,6 +370,120 @@ final class InkStore {
     // MARK: Helpers
 
     static func key(_ block: Block) -> String { "\(block.hash)#\(block.seq)" }
+
+    private static func resolve(_ item: AnchoredInk, in blocks: [Block]) -> Block? {
+        if let id = item.anchor?.blockID ?? item.blockID {
+            return blocks.first { $0.blockID == id }
+        }
+        return blocks.block(hash: item.blockHash, seq: item.blockSeq)
+    }
+
+    private func rememberOriginal(_ item: AnchoredInk) {
+        if var previous = originals[item.id] {
+            previous.blockHash = item.blockHash
+            previous.blockSeq = item.blockSeq
+            previous.blockID = item.blockID
+            previous.anchor = item.anchor
+            previous.behavior = item.behavior
+            originals[item.id] = previous
+        } else {
+            originals[item.id] = item
+        }
+    }
+
+    func restoreStudyTargets(in blocks: [Block]) {
+        let ids = Set(studyInsertions.flatMap { [$0.id] + $0.blockIDs })
+        let restored = orphans.filter { item in
+            guard let id = item.anchor?.blockID ?? item.blockID else { return false }
+            return ids.contains(id) && blocks.contains { $0.blockID == id }
+        }
+        let restoredIDs = Set(restored.map(\.id))
+        orphans.removeAll { restoredIDs.contains($0.id) }
+        ink.append(contentsOf: restored.map { item in
+            var copy = item
+            copy.lastKnownOrigin = nil
+            return copy
+        })
+    }
+
+    struct Attachment {
+        var blockID: String?
+        var blockHash: String
+        var blockSeq: Int
+        var anchor: TextAnchor?
+        var detached: Bool
+    }
+
+    func attachments() -> [UUID: Attachment] {
+        var result: [UUID: Attachment] = [:]
+        for item in ink + orphans {
+            result[item.id] = Attachment(blockID: item.blockID, blockHash: item.blockHash,
+                                         blockSeq: item.blockSeq, anchor: item.anchor,
+                                         detached: orphans.contains { $0.id == item.id })
+        }
+        return result
+    }
+
+    func restoreAttachments(_ saved: [UUID: Attachment]) {
+        var attached: [AnchoredInk] = []
+        var detached: [AnchoredInk] = []
+        for var item in ink + orphans {
+            if let reference = saved[item.id] {
+                item.blockID = reference.blockID
+                item.blockHash = reference.blockHash
+                item.blockSeq = reference.blockSeq
+                item.anchor = reference.anchor
+                if reference.detached { detached.append(item) }
+                else { item.lastKnownOrigin = nil; attached.append(item) }
+            } else if orphans.contains(where: { $0.id == item.id }) {
+                detached.append(item)
+            } else {
+                attached.append(item)
+            }
+        }
+        ink = attached
+        orphans = detached
+    }
+
+    func applyTextReplacement(blockID: String, start: Int, end: Int, replacement: String,
+                              oldText: String, blocks: [Block]) {
+        var detached: [UUID] = []
+        for index in ink.indices {
+            guard let anchor = ink[index].anchor, anchor.blockID == blockID else { continue }
+            if let changed = anchor.applyingReplacement(startUTF16: start, endUTF16: end,
+                                                        replacement: replacement, oldText: oldText) {
+                ink[index].anchor = changed
+            } else {
+                detached.append(ink[index].id)
+            }
+        }
+        for id in detached { detach(id, blocks: blocks) }
+    }
+
+    func applyBlockMappings(_ mappings: [EditorBlockMapping], blocks: [Block]) {
+        var detached: [UUID] = []
+        for index in ink.indices {
+            let id = ink[index].anchor?.blockID ?? ink[index].blockID
+            let candidates = mappings.filter { $0.fromBlockID == id }
+            guard !candidates.isEmpty else { continue }
+            if let anchor = ink[index].anchor {
+                let containing = candidates.filter {
+                    anchor.startUTF16 >= $0.fromStartUTF16 && anchor.endUTF16 <= $0.fromEndUTF16
+                }
+                guard containing.count == 1, let map = containing.first,
+                      let changed = anchor.remapped(blockID: map.toBlockID, text: map.targetText,
+                                                   offsetDeltaUTF16: map.offsetDeltaUTF16) else {
+                    detached.append(ink[index].id)
+                    continue
+                }
+                ink[index].anchor = changed
+                ink[index].blockID = map.toBlockID
+            } else if let map = candidates.first(where: { $0.fromStartUTF16 == 0 }) {
+                ink[index].blockID = map.toBlockID
+            }
+        }
+        for id in detached { detach(id, blocks: blocks) }
+    }
 
     /// The block whose vertical span contains the point, else the vertically
     /// nearest block (so margin scribbles still anchor somewhere sensible).
