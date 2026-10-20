@@ -2,7 +2,17 @@
 
 Markdown(.md) 파일을 GoodNotes처럼 예쁘게 렌더링하고, 그 위에 Apple Pencil로 손필기하는 **iPad 앱**. 기존 필기앱과 달리 페이지 분할 없이 **Notion처럼 하나의 긴 페이지로 스크롤하며 필기**한다.
 
-MD는 앱 밖(VSCode 등)에서 편집하고, 앱은 **보기 + 필기 전용**이다. MD가 외부에서 수정되면 변경을 감지해 **필기를 원래 내용 옆으로 재정렬(re-anchor)** 한다.
+앱 안에서 **렌더링된 Markdown을 키보드로 편집하고 Apple Pencil로 필기**한다. 텍스트는 실제 `.md`에 저장하며, 외부 수정과 충돌하면 덮어쓰지 않고 복구 사본을 저장할 수 있다. MD가 외부에서 수정되면 변경을 감지해 필기를 재배치하고, 대상을 확실히 찾지 못한 필기는 보관함에 남긴다.
+
+## 텍스트 편집과 학습 공간
+
+- 상단의 키보드/펜 버튼으로 텍스트 편집과 필기를 전환한다. 텍스트 모드에서 문단을 탭하면 굵게·기울임 등 서식이 보이는 상태로 편집된다. 두 손가락으로 이동·확대하며, `+` 메뉴에서 서식과 새 문단을 선택한다.
+- 표·수식 등 확장 문법은 미리보기와 **원문 편집**으로 열린다. 적용/취소를 명시적으로 선택하며, 편집하지 않은 프런트매터·참조 정의·확장 문법은 원문 그대로 유지한다. 한글 조합 중에는 저장하지 않는다.
+- `+` → **빈 필기 공간 / Markdown 보충 공간**은 선택한 블록 뒤에 실제 높이를 확보한다. 텍스트 모드에서 공간을 선택하고 `+` 메뉴로 크기·위치·삭제를 조정한다. 텍스트 모드의 실행 취소/다시 실행은 본문과 공간을 함께 복원한다.
+- 새 잉크는 기본적으로 모양을 유지한다. 텍스트를 선택한 뒤 `+` → **새 잉크 동작**에서 밑줄/강조를 선택하고 펜 모드로 바꾸면, 다음 필기가 선택 범위의 줄을 따라 표시된다. 자유 필기는 **필기 모양 유지**로 돌아간다. 임의의 원·화살표·수식을 자동 인식하는 기능은 아니다.
+- 원본 잉크·안정된 블록 ID·학습 공간은 `.md.inknote` v2에 저장한다. v1은 읽을 때 마이그레이션하며 원본 필기와 고아 필기를 보존한다. 더 최신 스키마는 읽기 전용이다. ZIP은 보충 공간의 이미지도 포함하고 PDF는 합성된 레이아웃을 사용한다.
+
+Windows에서 웹 편집·레이아웃·검색·이미지 수집을 검증했다. **Swift/Xcode 빌드, 실제 파일 조정·PencilKit·ZIP/PDF·iPad 한글 IME는 아직 기기 검증이 필요하다.** 실행 명령과 확인 절차는 [Mac/iPad 검증 안내](docs/live-ink-mac-qa.md)에 있다.
 
 ## 아키텍처
 
@@ -25,8 +35,8 @@ MD는 앱 밖(VSCode 등)에서 편집하고, 앱은 **보기 + 필기 전용**�
 ```
 
 핵심 설계 두 가지:
-1. **스크롤러는 단 하나** — WKWebView·PKCanvasView를 동기화하지 않고, 바깥 UIScrollView 하나만 스크롤/줌. 안쪽 두 레이어는 문서 전체 높이로 펼쳐 한 덩어리로 움직임. 펜=그리기/손가락=스크롤 (설정으로 손가락 그리기 가능).
-2. **필기를 좌표가 아닌 MD 블록에 앵커** — 글이 밀려도 블록을 따라 필기가 이동. 섹션을 통째로 옮겨도 따라감(LCS + 이동 블록 2차 매칭). 블록이 사라지면 보관함(orphan)으로 (자동 삭제 없음).
+1. **스크롤 소유자는 PKCanvasView 하나** — 뒤쪽의 단일 WKWebView에 같은 오프셋·확대율을 적용한다. 텍스트 모드도 이 캔버스의 위치를 유지한다. 펜이 닿아 있는 동안 필기 레이어를 교체하지 않는다.
+2. **안정된 블록 ID와 UTF-16 텍스트 범위** — 앱 안의 수정·분할·합치기는 명시적 편집 매핑과 undo 스냅샷을 사용한다. 외부 변경은 고유한 내용으로만 재연결하며, 삭제되거나 모호한 대상은 보관함에 남긴다. 자유 필기는 평행 이동하고 밑줄/강조는 현재 줄 조각에서 파생한다.
 
 잉크를 지키는 안전장치: 화면 이탈/백그라운드 시 즉시 저장(실패 시 사용자 경고), 동시 로드 직렬화로 베이스라인 경쟁 차단, 외부 이름변경 추적(NSFilePresenter) + 좌초된 sidecar 해시 입양, 더 최신 버전이 쓴 sidecar는 덮어쓰지 않음(읽기 전용 전환), 손상된 sidecar는 타임스탬프로 보존 백업(`.corrupt-*`), 비유한 좌표 클램프, 이미지/폰트 늦은 로드 시 지오메트리 재측정. JS↔Swift 블록 해시 동일성은 골든 픽스처 + Node 교차검증으로 잠가둠.
 
@@ -68,6 +78,8 @@ node scripts/check-localization.mjs
 # ZIP 경로/리소스 계약과 실제 Markdown 이미지 파서 검사
 node scripts/check-archive-contract.mjs
 node scripts/check-archive-renderer.mjs
+node MDNoteCore/Tests/parity/anchor_fixture_check.mjs
+node scripts/check-native-ink-contract.mjs # 소스 계약 검사; 네이티브 실행을 대신하지 않음
 node --check MDNote/Resources/WebAssets/app/bridge.js
 
 # iOS 앱 프로젝트 생성 + 컴파일 (SDK는 destination이 자동 해석)
@@ -75,6 +87,8 @@ xcodegen generate            # project.yml → MDNote.xcodeproj
 xcodebuild build -scheme MDNote \
   -destination 'generic/platform=iOS Simulator'
 ```
+
+오프라인 편집 번들은 저장소에 포함되어 런타임 CDN이 필요 없다. 번들을 다시 만들 때는 `cd editor && npm ci && npm run build && npm audit`를 사용한다. 의존성 버전은 lockfile로 고정한다. 실제 브라우저의 `check-rich-editor.mjs`, `check-annotation-layout.mjs`, `check-document-search.mjs` 실행 환경은 [검증 안내](docs/live-ink-mac-qa.md#브라우저-회귀-검사)에 있다.
 
 > Apple Pencil 입력은 시뮬레이터에서 재현되지 않으므로, 필기 동작의 최종 검증은 실제 iPad에서 한다.
 
