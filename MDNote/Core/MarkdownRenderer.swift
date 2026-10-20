@@ -34,6 +34,51 @@ struct DocumentSearchResult: Decodable {
     let y: Double?
 }
 
+struct EditorSnapshot: Decodable {
+    let markdown: String
+    let revision: Int
+    let composing: Bool
+    let historyID: String
+    let edits: [EditorTextEdit]
+    let mappings: [EditorBlockMapping]
+}
+
+struct EditorTextEdit: Decodable {
+    let blockID: String
+    let startUTF16: Int
+    let endUTF16: Int
+    let insertedText: String
+    let oldText: String
+}
+
+struct EditorBlockMapping: Decodable {
+    let fromBlockID: String
+    let toBlockID: String
+    let fromStartUTF16: Int
+    let fromEndUTF16: Int
+    let offsetDeltaUTF16: Int
+    let targetText: String
+}
+
+struct EditorState: Decodable {
+    let composing: Bool
+    let canUndo: Bool
+    let canRedo: Bool
+    let error: String?
+}
+
+private struct EditorRect: Decodable {
+    let x: Double
+    let y: Double
+    let width: Double
+    let height: Double
+}
+
+private struct EditorRangeGeometry: Decodable {
+    let status: String
+    let rects: [EditorRect]
+}
+
 /// Wraps a WKWebView that renders markdown via the bundled web assets and
 /// exposes the per-block geometry needed to anchor ink.
 @MainActor
@@ -47,6 +92,9 @@ final class MarkdownRenderer: NSObject {
     /// the initial measurement — e.g. an image or web font finished loading and
     /// pushed content down. The owner should re-query height + blocks.
     var onLayoutChanged: (() -> Void)?
+    var onDocumentEdited: ((EditorSnapshot) -> Void)?
+    var onEditorState: ((EditorState) -> Void)?
+    var onStudyInsertionsChanged: (([StudyInsertion]) -> Void)?
 
     /// Total page width the web layer lays out at (must match theme.css / bridge.js):
     /// a 1080pt text column on the left + a blank right writing margin = 1390pt.
@@ -59,6 +107,9 @@ final class MarkdownRenderer: NSObject {
         webView = WKWebView(frame: .zero, configuration: config)
         super.init()
         webView.configuration.userContentController.add(WeakScriptHandler(self), name: "layoutChanged")
+        for name in ["documentEdited", "editorState", "studyInsertionsChanged"] {
+            webView.configuration.userContentController.add(WeakScriptHandler(self), name: name)
+        }
         webView.navigationDelegate = self
         webView.scrollView.isScrollEnabled = false        // outer scroll view owns scrolling
         webView.scrollView.bounces = false
@@ -85,12 +136,49 @@ final class MarkdownRenderer: NSObject {
         didLoadAssets = true
     }
 
-    func render(markdown: String) async {
+    func render(markdown: String, blocks: [BlockSnapshot] = [], documentUnchanged: Bool = false) async {
         let literal = Self.jsStringLiteral(markdown)
+        let identities = (try? JSONEncoder().encode(blocks)).flatMap { String(data: $0, encoding: .utf8) } ?? "[]"
         let language = Self.jsStringLiteral(Bundle.main.preferredLocalizations.first ?? "en")
         _ = try? await webView.evaluateJavaScript(
-            "document.documentElement.lang = \(language); MDNote.render(\(literal))"
+            "document.documentElement.lang = \(language); MDNote.render(\(literal), \(identities), \(documentUnchanged ? "true" : "false"))"
         )
+    }
+
+    func setTextEditing(_ enabled: Bool) async {
+        _ = try? await webView.evaluateJavaScript("MDNote.setTextEditing(\(enabled ? "true" : "false"))")
+    }
+
+    func editorCommand(_ command: String) async {
+        _ = try? await webView.evaluateJavaScript("MDNote.editorCommand(\(Self.jsStringLiteral(command)))")
+    }
+
+    func flushEditor() async throws -> EditorSnapshot {
+        let value = try await webView.evaluateJavaScript("JSON.stringify(MDNote.flushEditor())")
+        guard let json = value as? String, let data = json.data(using: .utf8) else {
+            throw CocoaError(.coderReadCorrupt)
+        }
+        return try JSONDecoder().decode(EditorSnapshot.self, from: data)
+    }
+
+    func setStudyInsertions(_ items: [StudyInsertion], recordUndo: Bool = false) async {
+        guard let data = try? JSONEncoder().encode(items), let json = String(data: data, encoding: .utf8) else { return }
+        _ = try? await webView.evaluateJavaScript("MDNote.setStudyInsertions(\(json), \(recordUndo ? "true" : "false"))")
+    }
+
+    func selectedTextAnchor() async -> TextAnchor? {
+        guard let json = (try? await webView.evaluateJavaScript("JSON.stringify(MDNote.selectedTextAnchor())")) as? String,
+              let data = json.data(using: .utf8) else { return nil }
+        return try? JSONDecoder().decode(TextAnchor.self, from: data)
+    }
+
+    func rangeGeometry(_ anchor: TextAnchor) async -> [CGRect]? {
+        guard let encoded = try? JSONEncoder().encode(anchor), let argument = String(data: encoded, encoding: .utf8),
+              let json = (try? await webView.evaluateJavaScript("JSON.stringify(MDNote.rangeGeometry(\(argument)))")) as? String,
+              let data = json.data(using: .utf8),
+              let geometry = try? JSONDecoder().decode(EditorRangeGeometry.self, from: data),
+              geometry.status == "attached" else { return nil }
+        return geometry.rects.map { CGRect(x: $0.x, y: $0.y, width: $0.width, height: $0.height) }
     }
 
     /// Set the paper background style ("plain" / "ruled" / "grid" / "dots").
@@ -189,8 +277,20 @@ extension MarkdownRenderer: WKNavigationDelegate {
 extension MarkdownRenderer: WKScriptMessageHandler {
     func userContentController(_ userContentController: WKUserContentController,
                                didReceive message: WKScriptMessage) {
-        guard message.name == "layoutChanged" else { return }
-        onLayoutChanged?()
+        if message.name == "layoutChanged" { onLayoutChanged?(); return }
+        guard JSONSerialization.isValidJSONObject(message.body),
+              let data = try? JSONSerialization.data(withJSONObject: message.body) else { return }
+        switch message.name {
+        case "documentEdited":
+            if let snapshot = try? JSONDecoder().decode(EditorSnapshot.self, from: data), !snapshot.composing {
+                onDocumentEdited?(snapshot)
+            }
+        case "editorState":
+            if let state = try? JSONDecoder().decode(EditorState.self, from: data) { onEditorState?(state) }
+        case "studyInsertionsChanged":
+            if let items = try? JSONDecoder().decode([StudyInsertion].self, from: data) { onStudyInsertionsChanged?(items) }
+        default: break
+        }
     }
 }
 

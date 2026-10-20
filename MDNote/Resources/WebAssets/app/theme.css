@@ -32,6 +32,21 @@
 
 * { box-sizing: border-box; }
 
+.text-editing [data-block-id] { cursor: text; }
+.text-editing [data-block-id]:focus-visible,
+.ProseMirror:focus-visible,
+.source-editor button:focus-visible,
+.source-editor textarea:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; }
+.rich-editor-host { background: var(--accent-soft); }
+.ProseMirror { outline: none; white-space: pre-wrap; overflow-wrap: break-word; }
+.ProseMirror p:first-child { margin-top: 0; }
+.ProseMirror p:last-child { margin-bottom: 0; }
+.ProseMirror img { max-width: 100%; }
+.source-editor { padding: 8px; background: var(--code-bg); }
+.source-editor textarea { display: block; width: 100%; min-height: 160px; font: inherit; color: var(--ink); background: var(--paper); }
+.source-editor button { min-height: 44px; padding: 8px; margin: 8px 8px 0 0; font: inherit; color: var(--ink); background: var(--paper); border: 1px solid var(--rule); }
+.source-editor button:hover { background: var(--accent-soft); }
+
 html, body {
   margin: 0;
   padding: 0;

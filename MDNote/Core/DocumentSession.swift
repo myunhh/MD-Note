@@ -41,6 +41,8 @@ final class DocumentSession: ObservableObject {
     @Published var bookmarks: [DocumentBookmark] = []
     @Published var bookmarkError: String?
     @Published var bookmarkReady = false
+    @Published var textEditing = false
+    @Published var inkBehavior = "rigid"
 
     /// Monotonic haptic triggers — bumped by the controller, consumed by
     /// `.sensoryFeedback` in the document view.
@@ -81,6 +83,11 @@ final class DocumentSession: ObservableObject {
     func restoreOrphan(_ id: UUID) { controller?.restoreOrphan(id) }
 
     func toggleTools() { controller?.toggleToolPicker() }
+    func setTextEditing(_ enabled: Bool) { controller?.setTextEditing(enabled) }
+    func editorCommand(_ command: String) { controller?.editorCommand(command) }
+    func insertStudySpace(kind: String) { controller?.insertStudySpace(kind: kind) }
+    func setInkBehavior(_ behavior: String) { controller?.setInkBehavior(behavior) }
+    func saveRecoveryCopy() { controller?.saveRecoveryCopy() }
     func undo() { controller?.undo() }
     func redo() { controller?.redo() }
     func setPaper(_ style: String) { controller?.setPaper(style) }
