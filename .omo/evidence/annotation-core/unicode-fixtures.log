@@ -1,0 +1,3 @@
+PASS: 4 shared Unicode fixtures, 31 UTF16 boundary assertions using Intl.Segmenter.
+Swift implementation is checked by StableAnnotationTests.testSharedUTF16Fixtures on macOS; this invocation does not execute Swift.
+Exit: 0

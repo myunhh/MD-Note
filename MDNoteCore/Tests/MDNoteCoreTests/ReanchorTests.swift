@@ -57,7 +57,7 @@ final class ReanchorTests: XCTestCase {
 
     // MARK: Duplicate blocks keep ink on the right occurrence
 
-    func testInkFollowsWhenDistinctBlockInsertedAboveDuplicates() {
+    func testLegacyDuplicatesDetachEvenWhenDistinctBlockInsertedAbove() {
         // Two identical "note" blocks; ink is on the SECOND (seq 1).
         let old = [Block].from(textsAndFrames: [
             ("note", CGRect(x: 0, y: 0, width: 600, height: 20)),
@@ -78,18 +78,12 @@ final class ReanchorTests: XCTestCase {
         ])
 
         let result = Reanchor.reanchor(ink: [mark], oldBlocks: old, newBlocks: new)
-        XCTAssertEqual(result.followed.count, 1)
-        let moved = result.followed[0]
-        XCTAssertEqual(moved.blockSeq, 1, "still the 2nd note")
-        XCTAssertEqual(moved.resolvedOrigin(in: new), CGPoint(x: 5, y: 65), "followed down by 30pt")
+        XCTAssertTrue(result.followed.isEmpty)
+        XCTAssertEqual(result.orphaned.map(\.id), [mark.id])
+        XCTAssertEqual(result.orphaned.first?.strokeData, mark.strokeData)
     }
 
-    func testIdenticalDuplicateInsertIsAmbiguousButStable() {
-        // Inserting a block IDENTICAL to existing duplicates is inherently
-        // ambiguous — there's no content to tell which "note" is the user's.
-        // Defined behaviour: ink stays on the same ORDINAL occurrence (the Nth
-        // "note" from the top), which LCS resolves by treating the insertion as
-        // the trailing duplicate. This pins that contract.
+    func testIdenticalDuplicateInsertDetachesWithoutGuessing() {
         let old = [Block].from(textsAndFrames: [
             ("note", CGRect(x: 0, y: 0, width: 600, height: 20)),
             ("note", CGRect(x: 0, y: 30, width: 600, height: 20)),   // seq 1 <- anchor
@@ -105,13 +99,12 @@ final class ReanchorTests: XCTestCase {
         ])
 
         let result = Reanchor.reanchor(ink: [mark], oldBlocks: old, newBlocks: new)
-        XCTAssertEqual(result.followed.count, 1)
-        // Stays the 2nd note (ordinal preserved), not pushed to the 3rd.
-        XCTAssertEqual(result.followed[0].blockSeq, 1)
-        XCTAssertEqual(result.followed[0].resolvedOrigin(in: new), CGPoint(x: 5, y: 35))
+        XCTAssertTrue(result.followed.isEmpty)
+        XCTAssertEqual(result.orphaned.map(\.id), [mark.id])
+        XCTAssertEqual(result.orphaned.first?.lastKnownOrigin, CGPoint(x: 5, y: 35))
     }
 
-    func testDuplicateDeletionOrphansSecondOccurrence() {
+    func testDuplicateDeletionOrphansBothUnidentifiedOccurrences() {
         let old = [Block].from(textsAndFrames: [
             ("dup", CGRect(x: 0, y: 0, width: 600, height: 20)),
             ("dup", CGRect(x: 0, y: 30, width: 600, height: 20)),
@@ -125,8 +118,8 @@ final class ReanchorTests: XCTestCase {
         ])
 
         let result = Reanchor.reanchor(ink: [onFirst, onSecond], oldBlocks: old, newBlocks: new)
-        XCTAssertEqual(Set(result.followed.map(\.id)), [onFirst.id])
-        XCTAssertEqual(Set(result.orphaned.map(\.id)), [onSecond.id])
+        XCTAssertTrue(result.followed.isEmpty)
+        XCTAssertEqual(Set(result.orphaned.map(\.id)), [onFirst.id, onSecond.id])
     }
 
     // MARK: Edited block -> orphan, but similarity can suggest re-attach
@@ -230,13 +223,7 @@ final class ReanchorTests: XCTestCase {
         XCTAssertEqual(result.orphaned.map(\.id), [mark.id])
     }
 
-    func testMovedDuplicateFollowsNearestNotDocumentOrder() {
-        // Two identical "dup" blocks are relocated to the TOP, above A,B. The
-        // ink's old "dup" (at line 2) falls off the LCS and routes through the
-        // moved-block pass, which now has two surviving "dup" candidates: new
-        // index 0 (line 0) and index 1 (line 1). Document-order pairing would
-        // grab index 0; proximity must pick index 1 (nearest in source order),
-        // so the ink doesn't jump to a more-distant identical block.
+    func testMovedDuplicateDoesNotGuessByProximity() {
         let old = [Block].from(textsAndFrames: [
             ("A", CGRect(x: 0, y: 0, width: 600, height: 20)),
             ("B", CGRect(x: 0, y: 30, width: 600, height: 20)),
@@ -252,12 +239,11 @@ final class ReanchorTests: XCTestCase {
         ])
 
         let result = Reanchor.reanchor(ink: [mark], oldBlocks: old, newBlocks: new)
-        XCTAssertTrue(result.orphaned.isEmpty)
-        XCTAssertEqual(result.followed.first?.blockSeq, 1, "follows the nearer dup (seq 1), not the doc-order-first (seq 0)")
-        XCTAssertEqual(result.followed.first?.resolvedOrigin(in: new), CGPoint(x: 0, y: 30))
+        XCTAssertTrue(result.followed.isEmpty)
+        XCTAssertEqual(result.orphaned.map(\.id), [mark.id])
     }
 
-    func testMovedDuplicatesPairInDocumentOrder() {
+    func testMovedDuplicatesRemainDetachedWithoutIDs() {
         // Two identical blocks both displaced off the LCS pair up in order.
         let old = [Block].from(textsAndFrames: [
             ("dup", CGRect(x: 0, y: 0, width: 600, height: 20)),
@@ -275,10 +261,7 @@ final class ReanchorTests: XCTestCase {
         ])
 
         let result = Reanchor.reanchor(ink: [onFirst, onSecond], oldBlocks: old, newBlocks: new)
-        XCTAssertTrue(result.orphaned.isEmpty)
-        // LCS keeps one dup + x; the leftover old dup pairs with the leftover
-        // new dup. Both end up anchored, each on its own occurrence.
-        let seqs = Set(result.followed.map(\.blockSeq))
-        XCTAssertEqual(seqs, [0, 1], "each ink lands on a distinct occurrence")
+        XCTAssertTrue(result.followed.isEmpty)
+        XCTAssertEqual(Set(result.orphaned.map(\.id)), [onFirst.id, onSecond.id])
     }
 }
