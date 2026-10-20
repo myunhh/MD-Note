@@ -69,6 +69,8 @@ try {
     const childIDs = api.snapshot(root).filter(b => b.studyID === "supplement").map(b => b.blockID);
     api.applyInsertions(root, supplements, render);
     check("supplement blocks identifiable across reopen", childIDs.length === 3 && JSON.stringify(childIDs) === JSON.stringify(api.snapshot(root).filter(b => b.studyID === "supplement").map(b => b.blockID)));
+    api.applyInsertions(root, [{ ...supplements[0], blockIDs: ["persisted-child"] }], (markdown, item) => '<p data-block-id="' + item.blockIDs[0] + '">Edited supplement</p>');
+    check("renderer receives persisted supplement block IDs", api.snapshot(root).some(b => b.blockID === "persisted-child"));
     api.applyInsertions(root, [{ ...studies[0], afterBlockID: "lower" }]);
     check("move follows selected boundary", document.querySelector("[data-block-id=lower]").nextElementSibling.dataset.studyId === "blank");
     api.applyInsertions(root, [{ ...studies[0], afterBlockID: null }]);

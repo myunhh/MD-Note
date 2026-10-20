@@ -161,7 +161,7 @@
       el.style.display = "flow-root";
       el.style.minHeight = item.height + "px";
       if (item.kind === "markdown") {
-        el.innerHTML = renderMarkdown(item.markdown || "");
+        el.innerHTML = renderMarkdown(item.markdown || "", item);
         Array.from(el.children).forEach(function (child) {
           if (!child.hasAttribute("data-block-id")) child.setAttribute("data-block-id", item.id + "/content/" + identity(child.textContent + "|" + child.innerHTML));
         });
