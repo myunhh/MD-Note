@@ -1,0 +1,15 @@
+commit ee9c5dce2598c8609f1492c8512334b32a2202f7
+Author:     myunhh <picomin1027@gmail.com>
+AuthorDate: Fri Oct 16 12:58:02 2026 +0900
+Commit:     myunhh <picomin1027@gmail.com>
+CommitDate: Fri Oct 16 12:58:02 2026 +0900
+
+    Add persisted favorites and recently opened note sorting
+
+ MDNote/App/DocumentScreen.swift                    |  1 +
+ MDNote/App/LibraryMetadataStore.swift              | 93 ++++++++++++++++++++++
+ MDNote/App/LibraryView.swift                       | 65 +++++++++++++--
+ MDNote/Core/DocumentCanvasViewController.swift     |  1 +
+ .../Localization/en.lproj/Localizable.strings      | 10 +++
+ .../Localization/ko.lproj/Localizable.strings      | 10 +++
+ 6 files changed, 173 insertions(+), 7 deletions(-)

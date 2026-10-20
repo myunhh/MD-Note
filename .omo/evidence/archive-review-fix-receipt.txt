@@ -1,0 +1,44 @@
+Archive independent-review correction (root workspace, no staging or commit)
+
+Findings addressed:
+M1: Generic ZIP imports no longer parse Markdown to infer mandatory local assets. Removed the incomplete imageDestinations scanner entirely. Code examples and unresolved links are preserved as note bytes. Portable MD Note manifest entries still require a valid supported note and every declared asset. ZIP path/type/symlink/collision/count/size/CRC validation and failure cleanup remain in place.
+M2: Removed the source-format/order assertion for the file picker's .plainText/.text/.zip array.
+
+Files changed in this correction:
+MDNote/Core/NoteArchive.swift
+Tests/ArchiveTests/NoteArchiveTests.swift
+scripts/check-archive-contract.mjs
+scripts/check-archive-renderer.mjs
+README.md (only archive contract paragraph; preserved D's existing changes)
+docs/feature-integration-qa.md (archive checker description and archive scenario row)
+.omo/evidence/archive-transfer/report.md (historical-record notice pointing here)
+
+Executed validation and captured artifacts:
+1. node scripts/check-archive-renderer.mjs
+   Exit 0, PASS 18 fixtures using actual bridge.imageSources and bundled markdown-it. Includes space/tab indented code, fenced code, blockquote/list nested code, nested image syntax, references and entities.
+   Artifact: .omo/evidence/archive-review-fix/renderer.log
+2. node scripts/check-archive-contract.mjs
+   Exit 0, export path-unescape fixture, dependency pin and bilingual archive error resource checks pass. This is not native ZIP execution.
+   Artifact: .omo/evidence/archive-review-fix/contract.log
+3. node scripts/check-localization.mjs
+   Exit 0, 140 bilingual keys / 161 Swift lookups pass.
+   Artifact: .omo/evidence/archive-review-fix/localization.log
+4. node MDNoteCore/Tests/parity/hash_parity.mjs
+   Exit 0, 8/8 shared golden hash cases pass.
+   Artifact: .omo/evidence/archive-review-fix/hash-parity.log
+5. git -c core.safecrlf=false diff --check
+   Exit 0, no whitespace errors.
+   Artifact: .omo/evidence/archive-review-fix/diff-check.log
+6. swift --version; xcodebuild -list (separate availability probes)
+   Both command not found. Native XCTest/build/UI remain UNRUN.
+   Artifacts: .omo/evidence/archive-review-fix/swift.log and xcode.log
+
+Native regression scenarios authored, not executed:
+- testGenericArchivePreservesMarkdownWithoutInferringRequiredAssets: seven generic ZIP note bodies (space/tab-indented, fenced, blockquote/list nested code, deeply nested image syntax, actual missing/remote image links). Required observable: import succeeds, note bytes equal input, and hidden staging is absent.
+- testManifestCannotEscapeOrHideMissingAssets: a manifest with ../private.png must fail unsafePath; missing.png must fail missingAsset; only input.zip remains after each attempt.
+- Existing entry traversal/symlink/collision/bounds/CRC/native roundtrip cases retained. Source test suite now has 13 test methods; former scanner-only assertions were removed along with the scanner, and native generic-import acceptance replaces them.
+
+Native invocation for macOS: xcodegen generate; xcodebuild test -project MDNote.xcodeproj -scheme MDNote -destination 'platform=iOS Simulator,name=iPad (A16)' -resultBundlePath .omo/evidence/archive-review-fix/NativeArchiveTests.xcresult
+Select an installed iPad simulator if needed. No result bundle exists here; binary ZIP acceptance remains unverified until run on Xcode.
+
+No merge, git staging, commit, push, or remote write was performed. Other team edits were preserved.

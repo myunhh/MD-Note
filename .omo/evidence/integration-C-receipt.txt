@@ -1,0 +1,76 @@
+C merge conflict and semantic integration verification
+UTC: 2026-10-16T04:04:59.5700381Z
+COMMAND: node scripts/check-localization.mjs
+Localization checks passed: 132 bilingual keys, 159 Swift lookups, both samples and resource configuration.
+EXIT: 0
+COMMAND: node MDNoteCore/Tests/parity/hash_parity.mjs
+hash parity OK: 8/8 cases match Swift golden values.
+EXIT: 0
+COMMAND: git diff --check
+EXIT: 0
+COMMAND: rg -n conflict-markers MDNote MDNoteCore scripts project.yml
+EXIT: 1 (1 means no markers found)
+SOURCE TRACE: retained find, bookmarks, recent opens, rename, trash and recursive refresh
+MDNote/Core/DocumentSession.swift:36:    @Published var searchQuery = ""
+MDNote/Core/DocumentSession.swift:37:    @Published var searchCount = 0
+MDNote/Core/DocumentSession.swift:38:    @Published var searchIndex = 0
+MDNote/Core/DocumentSession.swift:39:    @Published var searchPending = false
+MDNote/Core/DocumentSession.swift:40:    @Published var searchFailed = false
+MDNote/Core/DocumentSession.swift:41:    @Published var bookmarks: [DocumentBookmark] = []
+MDNote/Core/DocumentSession.swift:42:    @Published var bookmarkError: String?
+MDNote/Core/DocumentSession.swift:43:    @Published var bookmarkReady = false
+MDNote/Core/DocumentSession.swift:95:        searchQuery = query
+MDNote/Core/DocumentSession.swift:96:        searchIndex = 0
+MDNote/Core/DocumentSession.swift:97:        searchCount = 0
+MDNote/Core/DocumentSession.swift:101:        guard searchCount > 0, !searchPending else { return }
+MDNote/Core/DocumentSession.swift:102:        searchIndex = (searchIndex + delta + searchCount) % searchCount
+MDNote/App/DocumentScreen.swift:10:    @State private var showDocumentSearch = false
+MDNote/App/DocumentScreen.swift:11:    @State private var showBookmarks = false
+MDNote/App/DocumentScreen.swift:20:                if showDocumentSearch {
+MDNote/App/DocumentScreen.swift:21:                    DocumentSearchView(session: session) {
+MDNote/App/DocumentScreen.swift:23:                        showDocumentSearch = false
+MDNote/App/DocumentScreen.swift:69:                        Button { showDocumentSearch = true } label: {
+MDNote/App/DocumentScreen.swift:72:                        Button { showBookmarks = true } label: {
+MDNote/App/DocumentScreen.swift:149:            .sheet(isPresented: $showBookmarks) {
+MDNote/App/DocumentScreen.swift:150:                BookmarksView(session: session)
+MDNote/App/DocumentScreen.swift:234:        LibraryMetadataStore.shared.recordOpened(url)
+MDNote/App/LibraryView.swift:132:        let pairs = [(doc.url, dst)] + ["inknote", "bookmarks"].compactMap { suffix -> (URL, URL)? in
+MDNote/App/LibraryView.swift:136:        guard [dst, dst.appendingPathExtension("inknote"), dst.appendingPathExtension("bookmarks")]
+MDNote/App/LibraryView.swift:158:        LibraryMetadataStore.shared.move(from: doc.url, to: dst)
+MDNote/App/LibraryView.swift:182:        LibraryMetadataStore.shared.move(from: folder.url, to: dst)
+MDNote/App/LibraryView.swift:209:        do { try TrashStore.discard(doc.url) }
+MDNote/App/LibraryView.swift:215:        do { try TrashStore.discard(folder.url) }
+MDNote/App/LibraryView.swift:422:                    searchRevision += 1
+MDNote/App/LibraryView.swift:502:        .onChange(of: store.documents) { _, _ in searchRevision += 1 }
+MDNote/App/LibraryView.swift:503:        .onChange(of: store.folders) { _, _ in searchRevision += 1 }
+MDNote/App/LibraryView.swift:558:            searchRevision += 1
+MDNote/App/LibraryView.swift:562:            searchRevision += 1
+MDNote/App/LibraryView.swift:567:            searchRevision += 1
+MDNote/Core/DocumentCanvasViewController.swift:199:        session?.searchQuery = ""
+MDNote/Core/DocumentCanvasViewController.swift:200:        session?.searchCount = 0
+MDNote/Core/DocumentCanvasViewController.swift:201:        session?.searchIndex = 0
+MDNote/Core/DocumentCanvasViewController.swift:202:        session?.searchPending = false
+MDNote/Core/DocumentCanvasViewController.swift:203:        session?.searchFailed = false
+MDNote/Core/DocumentCanvasViewController.swift:206:        session?.bookmarkReady = false
+MDNote/Core/DocumentCanvasViewController.swift:236:        LibraryMetadataStore.shared.move(from: old, to: newURL)
+MDNote/Core/DocumentCanvasViewController.swift:238:        inkStore?.relocate(to: newURL)
+MDNote/Core/DocumentCanvasViewController.swift:240:            if let store = bookmarkStore { try store.relocate(to: newURL) }
+MDNote/Core/DocumentCanvasViewController.swift:241:            else { try BookmarkStore.moveCompanion(from: old, to: newURL) }
+MDNote/Core/DocumentCanvasViewController.swift:246:            session?.bookmarkError = L10n.text("bookmarkMoveFailed")
+MDNote/Core/DocumentCanvasViewController.swift:260:        session?.bookmarkReady = false
+MDNote/Core/DocumentCanvasViewController.swift:264:            session?.bookmarkReady = didInitialLoad
+MDNote/Core/DocumentCanvasViewController.swift:414:        let query = session.searchQuery
+MDNote/Core/DocumentCanvasViewController.swift:415:        let index = session.searchIndex
+MDNote/Core/DocumentCanvasViewController.swift:416:        session.searchFailed = false
+MDNote/Core/DocumentCanvasViewController.swift:418:        session.searchPending = !query.isEmpty
+MDNote/Core/DocumentCanvasViewController.swift:423:                  session.searchQuery == query else { return }
+MDNote/Core/DocumentCanvasViewController.swift:424:            session.searchPending = false
+MDNote/Core/DocumentCanvasViewController.swift:425:            session.searchFailed = result == nil && !query.isEmpty
+MDNote/Core/DocumentCanvasViewController.swift:426:            session.searchCount = result?.count ?? 0
+MDNote/Core/DocumentCanvasViewController.swift:427:            session.searchIndex = result?.index ?? 0
+MDNote/Core/DocumentCanvasViewController.swift:705:            try store.relocate(to: url)
+MDNote/Core/DocumentCanvasViewController.swift:709:            session?.bookmarkError = nil
+MDNote/Core/DocumentCanvasViewController.swift:712:            session?.bookmarkError = L10n.text("bookmarkReadFailed")
+MDNote/Core/DocumentCanvasViewController.swift:746:            session?.bookmarkError = nil
+MDNote/Core/DocumentCanvasViewController.swift:748:            session?.bookmarkError = L10n.text("bookmarkWriteFailed")
+JUDGMENT: Only DocumentScreen.swift and DocumentSession.swift conflict hunks edited. Both state/property groups retained; find inset and bookmarks sheet remain. Recent-open hook remains once in makeUIViewController. Auto-merged note rename preflights/moves note+ink+bookmarks, rolls back errors, and only then migrates favorite/default keys; folder move carries sidecars and migrates subtree metadata. External move retains metadata, InkStore relocation and BookmarkStore relocation with recovery error path. Trash and E refresh hooks remain. No semantic loss found by source inspection; native execution unverified. No staging, commit, merge or abort.

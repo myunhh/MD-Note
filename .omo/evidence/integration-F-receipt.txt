@@ -1,0 +1,56 @@
+F archive merge final integration verification
+UTC: 2026-10-16T04:06:11.3126354Z
+COMMAND: node .omo/evidence/integration-F-localization.mjs
+PASS en: all 140 union keys retain exact three-way merge values, including intentional archive label changes.
+PASS ko: all 140 union keys retain exact three-way merge values, including intentional archive label changes.
+EXIT: 0
+COMMAND: node scripts/check-localization.mjs
+Localization checks passed: 140 bilingual keys, 161 Swift lookups, both samples and resource configuration.
+EXIT: 0
+COMMAND: node MDNoteCore/Tests/parity/hash_parity.mjs
+hash parity OK: 8/8 cases match Swift golden values.
+EXIT: 0
+COMMAND: node scripts/check-archive-contract.mjs
+PASS: 10 import image-pattern fixtures extracted from Swift source; dependency pin, ZIP picker, archive error localization contracts.
+LIMITATION: JavaScript regex compatibility checks do not execute Swift, Foundation, ZIPFoundation, or UIKit. Native XCTest remains required.
+EXIT: 0
+COMMAND: node scripts/check-archive-renderer.mjs
+PASS: 14 fixtures execute the real bridge.imageSources and bundled markdown-it parser, including deeply nested destinations/alt text, references, code, raw HTML and front matter.
+LIMITATION: Native Swift/WebKit transport and ZIP roundtrip require Xcode execution.
+EXIT: 0
+COMMAND: node --check MDNote/Resources/WebAssets/app/bridge.js
+EXIT: 0
+COMMAND: git diff --check
+EXIT: 0
+COMMAND: rg -n conflict-markers MDNote MDNoteCore scripts project.yml
+EXIT: 1 (1 means no markers)
+SOURCE TRACE: combined renderer, import refresh, sidecar export
+MDNote/Core/NoteArchive.swift:145:        for suffix in ["inknote", "bookmarks"] {
+MDNote/Core/DocumentCanvasViewController.swift:161:        flushPendingSave()       // durable ink write FIRST
+MDNote/Core/DocumentCanvasViewController.swift:806:    func shareSource() {
+MDNote/Core/DocumentCanvasViewController.swift:808:        flushPendingSave()                          // write debounced ink before reading the sidecar
+MDNote/Core/DocumentCanvasViewController.swift:819:                    try NoteArchive.export(note: md, noteData: noteData, imageSources: sources)
+MDNote/Core/DocumentCanvasViewController.swift:915:        flushPendingSave()
+MDNote/Core/DocumentCanvasViewController.swift:956:    private func flushPendingSave() {
+MDNote/Resources/WebAssets/app/bridge.js:318:    search(searchQuery, searchIndex, searchRevision);
+MDNote/Resources/WebAssets/app/bridge.js:412:  function imageSources(markdown) {
+MDNote/Resources/WebAssets/app/bridge.js:439:    search: search,
+MDNote/Resources/WebAssets/app/bridge.js:440:    imageSources: imageSources,
+MDNote/App/LibraryView.swift:115:        load(directory: directory)
+MDNote/App/LibraryView.swift:123:        load(directory: directory)
+MDNote/App/LibraryView.swift:132:        let pairs = [(doc.url, dst)] + ["inknote", "bookmarks"].compactMap { suffix -> (URL, URL)? in
+MDNote/App/LibraryView.swift:136:        guard [dst, dst.appendingPathExtension("inknote"), dst.appendingPathExtension("bookmarks")]
+MDNote/App/LibraryView.swift:154:            load(directory: directory)
+MDNote/App/LibraryView.swift:159:        load(directory: directory)
+MDNote/App/LibraryView.swift:193:        load(directory: directory)
+MDNote/App/LibraryView.swift:211:        load(directory: directory)
+MDNote/App/LibraryView.swift:217:        load(directory: directory)
+MDNote/App/LibraryView.swift:228:                        return try NoteArchive.importZIP(url, into: destination)
+MDNote/App/LibraryView.swift:231:                load(directory: directory)
+MDNote/App/LibraryView.swift:240:        load(directory: directory)
+MDNote/App/LibraryView.swift:252:        load(directory: directory)
+MDNote/App/LibraryView.swift:517:        .onChange(of: store.folders) { _, _ in searchRevision += 1 }
+MDNote/App/LibraryView.swift:571:            store.load(directory: directory)
+MDNote/App/LibraryView.swift:575:            store.load(directory: directory)
+MDNote/App/LibraryView.swift:580:            store.load(directory: directory)
+JUDGMENT: Only en/ko Localizable.strings and bridge.js conflict markers edited. B search and F imageSources exports coexist; source parse/range state retained. ZIP completion reloads library and folder-change observer refreshes E; normal folder imports also reload. Share flushes pending ink before reading and archives actual .inknote/.bookmarks sidecar paths. No adjacent integration loss found. Native Swift/ZIP roundtrip unverified; root will rerun actual DOM tests after commit. No git staging/commit/merge/abort.

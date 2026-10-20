@@ -1,0 +1,2 @@
+PASS: 10 import image-pattern fixtures extracted from Swift source; dependency pin, ZIP picker, archive error localization contracts.
+LIMITATION: JavaScript regex compatibility checks do not execute Swift, Foundation, ZIPFoundation, or UIKit. Native XCTest remains required.

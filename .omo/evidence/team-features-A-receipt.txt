@@ -1,0 +1,28 @@
+Member A trash implementation receipt
+Commit: 3baac025397ca8e0bb05e29a5db4c5f3e2ecb61a
+Branch: team/team-7dc35eaa/A
+Worktree: C:/Users/picom/orca/MD-Note/.omo/teams/team-7dc35eaa/worktrees/A
+git status --short after commit: empty (clean).
+
+Fresh validation against final source before commit:
+node scripts/check-localization.mjs (exit 0):
+Localization checks passed: 85 bilingual keys, 100 Swift lookups, both samples and resource configuration.
+node MDNoteCore/Tests/parity/hash_parity.mjs (exit 0):
+hash parity OK: 8/8 cases match Swift golden values.
+git diff --check and git diff --staged --check: exit 0.
+
+Native fixture invocation:
+swift test --package-path MDNoteCore --filter TrashRepositoryTests
+/usr/bin/bash: line 1: swift: command not found
+xcodebuild -version
+/usr/bin/bash: line 1: xcodebuild: command not found
+Thirteen deterministic Swift filesystem fixtures authored but NOT EXECUTED.
+Native compilation, runtime behavior, preferences integration, accessibility and visual QA are BLOCKED / NOT VERIFIED. No screenshots claimed.
+
+Feature: .Trash manifests and intact folder payloads, .inknote/.bookmarks companions, metadata snapshots, collision-safe restoration, explicit missing-parent root restoration, rollback retention/errors, bilingual accessible controls and permanent deletion confirmation.
+Integration: preserve C bookmark rename hooks; D uses docLibraryMetadata: + relativeKey and observes libraryMetadataDidChange; E excludes .Trash. LibraryView and localization tail hunks overlap peer branches.
+Limits: abrupt termination during a multi-file move can leave partial payload requiring manual recovery. Failed rollback retains manifest and remaining files. No npm/Python manifests; audits N/A. No tools installed or global settings changed.
+
+Committed detailed evidence: .omo/teams/team-7dc35eaa/worktrees/A/.omo/evidence/trash/report.md
+Manual native scenarios: .omo/teams/team-7dc35eaa/worktrees/A/.omo/evidence/trash/native-qa.md
+Raw logs: .omo/teams/team-7dc35eaa/worktrees/A/.omo/evidence/trash/{localization,hash-parity,diff-check,swift-tests,xcode}.log

@@ -1,0 +1,314 @@
+diff --git a/MDNote/App/DocumentScreen.swift b/MDNote/App/DocumentScreen.swift
+index 76d2943..24eadc5 100644
+--- a/MDNote/App/DocumentScreen.swift
++++ b/MDNote/App/DocumentScreen.swift
+@@ -211,6 +211,7 @@ struct DocumentCanvasView: UIViewControllerRepresentable {
+         vc.session = session
+         session.controller = vc
+         vc.open(url: url)
++        LibraryMetadataStore.shared.recordOpened(url)
+         return vc
+     }
+ 
+diff --git a/MDNote/App/LibraryMetadataStore.swift b/MDNote/App/LibraryMetadataStore.swift
+new file mode 100644
+index 0000000..087840e
+--- /dev/null
++++ b/MDNote/App/LibraryMetadataStore.swift
+@@ -0,0 +1,93 @@
++import Combine
++import Foundation
++
++@MainActor
++final class LibraryMetadataStore: ObservableObject {
++    static let shared = LibraryMetadataStore()
++    static let defaultsPrefix = "docLibraryMetadata:"
++
++    private struct Entry: Codable {
++        var isFavorite = false
++        var lastOpened: Date?
++    }
++
++    @Published private var entries: [String: Entry] = [:]
++    private let defaults: UserDefaults
++    private var changeSubscription: AnyCancellable?
++
++    init(defaults: UserDefaults = .standard) {
++        self.defaults = defaults
++        reload()
++        changeSubscription = NotificationCenter.default.publisher(
++            for: Notification.Name("libraryMetadataDidChange"))
++            .receive(on: RunLoop.main)
++            .sink { [weak self] _ in self?.reload() }
++    }
++
++    func isFavorite(_ url: URL) -> Bool {
++        entries[LibraryStore.relativeKey(for: url)]?.isFavorite ?? false
++    }
++
++    func toggleFavorite(_ url: URL) {
++        let key = LibraryStore.relativeKey(for: url)
++        var entry = entries[key] ?? Entry()
++        entry.isFavorite.toggle()
++        save(entry, for: key)
++    }
++
++    func lastOpenedDate(_ url: URL) -> Date? {
++        entries[LibraryStore.relativeKey(for: url)]?.lastOpened
++    }
++
++    func recordOpened(_ url: URL) {
++        let key = LibraryStore.relativeKey(for: url)
++        var entry = entries[key] ?? Entry()
++        entry.lastOpened = Date()
++        save(entry, for: key)
++    }
++
++    /// Includes descendants without requiring the old path to still exist.
++    func move(from oldURL: URL, to newURL: URL) {
++        let old = LibraryStore.relativeKey(for: oldURL)
++        let new = LibraryStore.relativeKey(for: newURL)
++        guard old != new else { return }
++        let moved = entries.filter { isWithin($0.key, root: old) }
++        for (key, entry) in moved {
++            let destination = new + key.dropFirst(old.count)
++            save(entry, for: destination)
++            defaults.removeObject(forKey: Self.defaultsPrefix + key)
++            entries.removeValue(forKey: key)
++        }
++    }
++
++    func remove(_ url: URL) {
++        let root = LibraryStore.relativeKey(for: url)
++        for key in entries.keys.filter({ isWithin($0, root: root) }) {
++            defaults.removeObject(forKey: Self.defaultsPrefix + key)
++            entries.removeValue(forKey: key)
++        }
++    }
++
++    /// Trash snapshots restore the encoded preferences before posting a change.
++    func reload() {
++        let decoder = PropertyListDecoder()
++        var loaded: [String: Entry] = [:]
++        for (key, value) in defaults.dictionaryRepresentation()
++        where key.hasPrefix(Self.defaultsPrefix) {
++            guard let data = value as? Data,
++                  let entry = try? decoder.decode(Entry.self, from: data) else { continue }
++            loaded[String(key.dropFirst(Self.defaultsPrefix.count))] = entry
++        }
++        entries = loaded
++    }
++
++    private func save(_ entry: Entry, for key: String) {
++        guard let data = try? PropertyListEncoder().encode(entry) else { return }
++        defaults.set(data, forKey: Self.defaultsPrefix + key)
++        entries[key] = entry
++    }
++
++    private func isWithin(_ key: String, root: String) -> Bool {
++        key == root || key.hasPrefix(root + "/")
++    }
++}
+diff --git a/MDNote/App/LibraryView.swift b/MDNote/App/LibraryView.swift
+index 9140b88..7b2f112 100644
+--- a/MDNote/App/LibraryView.swift
++++ b/MDNote/App/LibraryView.swift
+@@ -135,6 +135,7 @@ final class LibraryStore: ObservableObject {
+             try? FileManager.default.moveItem(at: oldSidecar, to: dst.appendingPathExtension("inknote"))
+         }
+         migrateDocDefaults(from: doc.url, to: dst)   // keep paper + scroll/zoom across rename
++        LibraryMetadataStore.shared.move(from: doc.url, to: dst)
+         load(directory: directory)
+     }
+ 
+@@ -158,6 +159,7 @@ final class LibraryStore: ObservableObject {
+         let dst = uniqueURL(folder.url.deletingLastPathComponent().appendingPathComponent(base),
+                             isDirectory: true)
+         guard (try? FileManager.default.moveItem(at: folder.url, to: dst)) != nil else { return }
++        LibraryMetadataStore.shared.move(from: folder.url, to: dst)
+         // Every contained note moved to a new relative path; carry its per-doc
+         // defaults (paper + scroll/zoom) along so they aren't silently reset.
+         let dstPath = dst.standardizedFileURL.path
+@@ -328,6 +330,7 @@ struct LibraryView: View {
+     let directory: URL
+     @Binding var path: NavigationPath
+     @StateObject private var store = LibraryStore()
++    @ObservedObject private var metadata = LibraryMetadataStore.shared
+ 
+     @State private var showImporter = false
+     @State private var importIsFolder = false
+@@ -338,32 +341,56 @@ struct LibraryView: View {
+     @State private var promptAction: (String) -> Void = { _ in }
+     @State private var searchText = ""
+     @AppStorage("librarySort") private var sortOrder = "modified"
++    @AppStorage("libraryMetadataFavoritesOnly") private var favoritesOnly = false
+ 
+     private let columns = [GridItem(.adaptive(minimum: 165, maximum: 220), spacing: 22)]
+     private var isRoot: Bool { directory.standardizedFileURL == LibraryStore.documentsURL.standardizedFileURL }
+ 
+     private var visibleFolders: [LibraryFolder] {
++        guard !favoritesOnly else { return [] }
+         guard !searchText.isEmpty else { return store.folders }
+         return store.folders.filter { $0.name.localizedCaseInsensitiveContains(searchText) }
+     }
+ 
+     private var visibleDocuments: [LibraryDoc] {
+         var docs = store.documents
++        if favoritesOnly { docs = docs.filter { metadata.isFavorite($0.url) } }
+         if !searchText.isEmpty {
+             let q = searchText.lowercased()
+             docs = docs.filter {
+                 $0.name.localizedCaseInsensitiveContains(searchText) || $0.searchText.contains(q)
+             }
+         }
+-        if sortOrder == "name" {
+-            docs.sort { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
++        docs.sort { lhs, rhs in
++            if sortOrder == "recent" {
++                let left = metadata.lastOpenedDate(lhs.url) ?? .distantPast
++                let right = metadata.lastOpenedDate(rhs.url) ?? .distantPast
++                if left != right { return left > right }
++            } else if sortOrder != "name", lhs.modified != rhs.modified {
++                return lhs.modified > rhs.modified
++            }
++            let nameOrder = lhs.name.localizedCaseInsensitiveCompare(rhs.name)
++            if nameOrder != .orderedSame { return nameOrder == .orderedAscending }
++            return LibraryStore.relativeKey(for: lhs.url) < LibraryStore.relativeKey(for: rhs.url)
+         }
+         return docs
+     }
+ 
+     var body: some View {
+         ScrollView {
+-            if store.folders.isEmpty && store.documents.isEmpty {
++            if favoritesOnly && visibleDocuments.isEmpty {
++                ContentUnavailableView {
++                    Label(L10n.text("libraryMetadataNoFavorites"), systemImage: "star")
++                } description: {
++                    Text(L10n.text("libraryMetadataFavoritesHint"))
++                } actions: {
++                    Button(L10n.text("libraryMetadataShowAll")) {
++                        favoritesOnly = false
++                        searchText = ""
++                    }
++                }
++                .padding(.top, 80)
++            } else if store.folders.isEmpty && store.documents.isEmpty {
+                 VStack(spacing: 16) {
+                     Image(systemName: "doc.text.image")
+                         .font(.system(size: 52, weight: .light))
+@@ -398,9 +425,17 @@ struct LibraryView: View {
+                             }
+                     }
+                     ForEach(visibleDocuments) { doc in
+-                        NavigationLink(value: doc) { DocumentCard(doc: doc) }
++                        NavigationLink(value: doc) {
++                            DocumentCard(doc: doc, isFavorite: metadata.isFavorite(doc.url))
++                        }
+                             .buttonStyle(CardButtonStyle())
+                             .contextMenu {
++                                Button { metadata.toggleFavorite(doc.url) } label: {
++                                    Label(metadata.isFavorite(doc.url)
++                                          ? L10n.text("libraryMetadataRemoveFavorite")
++                                          : L10n.text("libraryMetadataAddFavorite"),
++                                          systemImage: metadata.isFavorite(doc.url) ? "star.slash" : "star")
++                                }
+                                 Button { askRename(doc) } label: { Label(L10n.text("rename"), systemImage: "pencil") }
+                                 Button(role: .destructive) { store.delete(doc) } label: { Label(L10n.text("delete"), systemImage: "trash") }
+                             }
+@@ -419,11 +454,16 @@ struct LibraryView: View {
+                     Picker(L10n.text("sort"), selection: $sortOrder) {
+                         Label(L10n.text("sortModified"), systemImage: "clock").tag("modified")
+                         Label(L10n.text("sortName"), systemImage: "textformat").tag("name")
++                        Label(L10n.text("libraryMetadataSortRecent"), systemImage: "clock.arrow.circlepath").tag("recent")
++                    }
++                    Toggle(isOn: $favoritesOnly) {
++                        Label(L10n.text("libraryMetadataFavoritesOnly"), systemImage: "star")
+                     }
+                 } label: {
+-                    Image(systemName: "arrow.up.arrow.down")
++                    Image(systemName: favoritesOnly ? "star.fill" : "arrow.up.arrow.down")
+                 }
+-                .accessibilityLabel(L10n.text("sort"))
++                .accessibilityLabel(L10n.text("libraryMetadataSortAndFilter"))
++                .accessibilityValue(favoritesOnly ? L10n.text("libraryMetadataFavoritesOnly") : L10n.text("libraryMetadataAllNotes"))
+             }
+             ToolbarItem(placement: .topBarTrailing) {
+                 Menu {
+@@ -505,6 +545,7 @@ struct LibraryView: View {
+ 
+ struct DocumentCard: View {
+     let doc: LibraryDoc
++    var isFavorite = false
+ 
+     var body: some View {
+         VStack(alignment: .leading, spacing: 10) {
+@@ -523,9 +564,19 @@ struct DocumentCard: View {
+                     .clipped()
+             }
+             .aspectRatio(0.77, contentMode: .fit)
+-            Text(doc.name).font(.subheadline.weight(.medium)).lineLimit(1)
++            HStack(spacing: 5) {
++                Text(doc.name).font(.subheadline.weight(.medium)).lineLimit(1)
++                if isFavorite {
++                    Image(systemName: "star.fill")
++                        .font(.caption)
++                        .foregroundStyle(Color.mdAccent)
++                        .accessibilityHidden(true)
++                }
++            }
+             Text(doc.modified, style: .date).font(.caption2).foregroundStyle(.tertiary)
+         }
++        .accessibilityElement(children: .combine)
++        .accessibilityValue(isFavorite ? L10n.text("libraryMetadataFavorite") : "")
+     }
+ }
+ 
+diff --git a/MDNote/Core/DocumentCanvasViewController.swift b/MDNote/Core/DocumentCanvasViewController.swift
+index 6a90af3..b8be5cd 100644
+--- a/MDNote/Core/DocumentCanvasViewController.swift
++++ b/MDNote/Core/DocumentCanvasViewController.swift
+@@ -219,6 +219,7 @@ final class DocumentCanvasViewController: UIViewController {
+     /// and its sidecar — stays attached to the file.
+     private func documentDidMove(to newURL: URL) {
+         guard let old = currentURL, old != newURL else { return }
++        LibraryMetadataStore.shared.move(from: old, to: newURL)
+         currentURL = newURL
+         inkStore?.relocate(to: newURL)
+         renderer.setAssetBase(newURL.deletingLastPathComponent())
+diff --git a/MDNote/Resources/Localization/en.lproj/Localizable.strings b/MDNote/Resources/Localization/en.lproj/Localizable.strings
+index 0b1d2dd..cbb5b4f 100644
+--- a/MDNote/Resources/Localization/en.lproj/Localizable.strings
++++ b/MDNote/Resources/Localization/en.lproj/Localizable.strings
+@@ -68,3 +68,13 @@
+ "inkPosition" = "Handwriting %ld · Near %ld pt in document";
+ "inkNumber" = "Handwriting %ld";
+ "orphanCount" = "Unanchored handwriting: %ld";
++"libraryMetadataAddFavorite" = "Add to Favorites";
++"libraryMetadataRemoveFavorite" = "Remove from Favorites";
++"libraryMetadataFavorite" = "Favorite";
++"libraryMetadataFavoritesOnly" = "Favorites in This Folder";
++"libraryMetadataSortRecent" = "Recently Opened";
++"libraryMetadataSortAndFilter" = "Sort and Filter";
++"libraryMetadataAllNotes" = "All Notes";
++"libraryMetadataNoFavorites" = "No Matching Favorites";
++"libraryMetadataFavoritesHint" = "Add notes to Favorites from their menu. Favorites here are limited to this folder and your search.";
++"libraryMetadataShowAll" = "Show All Notes";
+diff --git a/MDNote/Resources/Localization/ko.lproj/Localizable.strings b/MDNote/Resources/Localization/ko.lproj/Localizable.strings
+index 0a281fe..0284218 100644
+--- a/MDNote/Resources/Localization/ko.lproj/Localizable.strings
++++ b/MDNote/Resources/Localization/ko.lproj/Localizable.strings
+@@ -68,3 +68,13 @@
+ "inkPosition" = "손글씨 %ld · 문서 %ldpt 부근";
+ "inkNumber" = "손글씨 %ld";
+ "orphanCount" = "자리를 잃은 필기 %ld개";
++"libraryMetadataAddFavorite" = "즐겨찾기에 추가";
++"libraryMetadataRemoveFavorite" = "즐겨찾기에서 제거";
++"libraryMetadataFavorite" = "즐겨찾기";
++"libraryMetadataFavoritesOnly" = "이 폴더의 즐겨찾기";
++"libraryMetadataSortRecent" = "최근 열어본 순";
++"libraryMetadataSortAndFilter" = "정렬 및 필터";
++"libraryMetadataAllNotes" = "모든 노트";
++"libraryMetadataNoFavorites" = "일치하는 즐겨찾기가 없습니다";
++"libraryMetadataFavoritesHint" = "노트 메뉴에서 즐겨찾기에 추가하세요. 이 폴더와 검색 조건에 맞는 즐겨찾기만 표시됩니다.";
++"libraryMetadataShowAll" = "모든 노트 보기";

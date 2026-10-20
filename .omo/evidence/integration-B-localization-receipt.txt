@@ -1,0 +1,15 @@
+B merge localization resolution verification
+UTC: 2026-10-16T04:00:20.9865517Z
+COMMAND: node .omo/evidence/integration-B-localization.mjs
+PASS en: all 90 unique branch-union keys and values retained; no conflict markers.
+PASS ko: all 90 unique branch-union keys and values retained; no conflict markers.
+EXIT: 0
+COMMAND: node scripts/check-localization.mjs
+Localization checks passed: 90 bilingual keys, 105 Swift lookups, both samples and resource configuration.
+EXIT: 0
+COMMAND: node MDNoteCore/Tests/parity/hash_parity.mjs
+hash parity OK: 8/8 cases match Swift golden values.
+EXIT: 0
+COMMAND: git diff --check
+EXIT: 0
+JUDGMENT: Only en/ko localization conflict markers removed; both feature key sets and values preserved. No staging, commit, merge or abort performed. Index remains unmerged intentionally for leader integration.

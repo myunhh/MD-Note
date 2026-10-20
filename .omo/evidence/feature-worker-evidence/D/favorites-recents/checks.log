@@ -1,0 +1,8 @@
+COMMAND: node scripts/check-localization.mjs
+Localization checks passed: 80 bilingual keys, 93 Swift lookups, both samples and resource configuration.
+EXIT: 0
+COMMAND: node MDNoteCore/Tests/parity/hash_parity.mjs
+hash parity OK: 8/8 cases match Swift golden values.
+EXIT: 0
+COMMAND: git diff --check
+EXIT: 0

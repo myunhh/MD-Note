@@ -1,0 +1,31 @@
+Member B: document-search
+Commit: 066d446 Add document search with layout-safe highlighting
+Worktree: C:/Users/picom/orca/MD-Note/.omo/teams/team-7dc35eaa/worktrees/B
+
+Fresh actual validation from this implementation run:
+MDNOTE_OMOWRIGHT_LOADER=C:/Users/picom/.codex/plugins/cache/sisyphuslabs/omo/5.1.33/skills/browser/scripts/omowright.mjs MDNOTE_CHROME=C:/Program Files/Google/Chrome/Application/chrome.exe node scripts/check-document-search.mjs
+Document search real DOM checks passed: 28/28.
+node scripts/check-localization.mjs
+Localization checks passed: 80 bilingual keys, 95 Swift lookups, both samples and resource configuration.
+node MDNoteCore/Tests/parity/hash_parity.mjs
+hash parity OK: 8/8 cases match Swift golden values.
+node --check MDNote/Resources/WebAssets/app/bridge.js: exit 0
+git diff --check: exit 0
+npm audit --json: exit 1 ENOLOCK (no npm manifest or lockfile; no dependency added).
+
+DOM assertions cover literal regex/HTML/script-looking queries, Unicode/Korean,
+inline text nodes, hard breaks, counts, wrapping, stale revisions, clear,
+rerender, fallback scaling, and unchanged content DOM/layout/height. Actual
+Chrome screenshots of CSS Highlight and overlay fallback were directly inspected.
+
+Full report and nonempty captured artifacts:
+C:/Users/picom/orca/MD-Note/.omo/teams/team-7dc35eaa/worktrees/B/.omo/evidence/document-search/REPORT.md
+Adjacent: dom-results.json, browser.log, localization.log, hash-parity.log,
+verification.json, highlight.png, fallback.png, npm-audit.json, commit.txt.
+
+Limits: Swift, XcodeGen, Xcode and iPad simulator unavailable on Windows.
+Native compilation, SwiftUI layout/VoiceOver/Pencil, actual iOS17 fallback,
+native zoom/x navigation preservation and PDF output remain unverified.
+Existing native scroll(toDocumentY:) is reused unchanged; no web scrolling added.
+Native/manual scenarios and integration hooks are detailed in REPORT.md.
+Only untracked .omo evidence remains in B. No merge, push or publish performed.

@@ -1,0 +1,46 @@
+diff --cc MDNote/App/DocumentScreen.swift
+index 17612f8,199d480..0000000
+--- a/MDNote/App/DocumentScreen.swift
++++ b/MDNote/App/DocumentScreen.swift
+@@@ -7,7 -7,7 +7,8 @@@ struct DocumentScreen: View 
+      @StateObject private var session = DocumentSession()
+      @State private var showTray = false
+      @State private var showOutline = false
+ +    @State private var showDocumentSearch = false
++     @State private var showBookmarks = false
+      @Environment(\.accessibilityReduceMotion) private var reduceMotion
+  
+      var body: some View {
+@@@ -65,10 -57,9 +66,13 @@@
+                          }
+                      }
+                      Menu {
+ +                        Button { showDocumentSearch = true } label: {
+ +                            Label(L10n.text("documentSearch.title"), systemImage: "magnifyingglass")
+ +                        }
++                         Button { showBookmarks = true } label: {
++                             Label(L10n.text("bookmarkTitle"), systemImage: "bookmark")
++                         }
+ +                        Divider()
+                          Button { session.scrollToBeginning() } label: {
+                              Label(L10n.text("goToBeginning"), systemImage: "arrow.up.to.line")
+                          }
+diff --cc MDNote/Core/DocumentSession.swift
+index c6ce4a4,c87047d..0000000
+--- a/MDNote/Core/DocumentSession.swift
++++ b/MDNote/Core/DocumentSession.swift
+@@@ -32,11 -33,9 +33,14 @@@ final class DocumentSession: Observable
+      @Published var fingerDrawing = UserDefaults.standard.bool(forKey: "fingerDrawing")
+      @Published var outline: [OutlineItem] = []
+      @Published var docStats: DocStats?
+ +    @Published var searchQuery = ""
+ +    @Published var searchCount = 0
+ +    @Published var searchIndex = 0
+ +    @Published var searchPending = false
+ +    @Published var searchFailed = false
++     @Published var bookmarks: [DocumentBookmark] = []
++     @Published var bookmarkError: String?
++     @Published var bookmarkReady = false
+  
+      /// Monotonic haptic triggers — bumped by the controller, consumed by
+      /// `.sensoryFeedback` in the document view.

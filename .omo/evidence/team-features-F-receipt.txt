@@ -1,0 +1,37 @@
+Member F archive-transfer receipt
+Commits (both required):
+9d1abc0 Add portable note archives with safe ZIP import
+65a01f5 Use renderer image sources for complete portable archives
+Branch: team/team-7dc35eaa/F
+Worktree: C:/Users/picom/orca/MD-Note/.omo/teams/team-7dc35eaa/worktrees/F
+Detailed evidence: C:/Users/picom/orca/MD-Note/.omo/teams/team-7dc35eaa/worktrees/F/.omo/evidence/archive-transfer/report.md
+
+Executed from the worktree:
+node scripts/check-archive-contract.mjs
+PASS: 10 import image-pattern fixtures extracted from Swift source; dependency pin, ZIP picker, archive error localization contracts.
+LIMITATION: JavaScript regex compatibility checks do not execute Swift, Foundation, ZIPFoundation, or UIKit. Native XCTest remains required.
+
+node scripts/check-archive-renderer.mjs
+PASS: 14 fixtures execute the real bridge.imageSources and bundled markdown-it parser, including deeply nested destinations/alt text, references, code, raw HTML and front matter.
+LIMITATION: Native Swift/WebKit transport and ZIP roundtrip require Xcode execution.
+
+node MDNoteCore/Tests/parity/hash_parity.mjs
+hash parity OK: 8/8 cases match Swift golden values.
+
+node scripts/check-localization.mjs
+Localization checks passed: 78 bilingual keys, 85 Swift lookups, both samples and resource configuration.
+
+git diff --check
+PASS: git diff --check exited 0
+
+git ls-remote https://github.com/weichsel/ZIPFoundation.git refs/tags/0.9.20
+86fc841708997c5bce8545e23845125f4eb28493 refs/tags/0.9.20
+
+swift --version: command not found
+xcodebuild -list: command not found
+npm audit: ENOLOCK, no npm lockfile; audit not passed.
+git status --short after commit: empty, worktree clean.
+
+Native tests: 14 deterministic XCTest cases written in Tests/ArchiveTests/NoteArchiveTests.swift but NOT executed. Native build, real ZIPFoundation roundtrip, iPad UI and screenshots remain unverified on Windows. Detailed manual native scenarios and exact xcodebuild invocation are in the report. No remote publication or merge performed by this worker.
+
+Final export requires complete sources from the renderer's actual bundled Markdown parser, archives the exact note snapshot parsed, and includes a validated versioned manifest so import preserves complex syntax and entities without scanner disagreements. Generic older ZIPs retain conservative image validation. Both paths enforce archive entry path/type/CRC/size/count containment checks.

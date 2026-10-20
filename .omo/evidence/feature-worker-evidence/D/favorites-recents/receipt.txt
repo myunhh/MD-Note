@@ -1,0 +1,16 @@
+Favorites-recents verification receipt
+UTC: 2026-10-16T03:58:31.5733405Z
+COMMAND: git rev-parse HEAD
+ee9c5dce2598c8609f1492c8512334b32a2202f7
+EXIT: 0
+COMMAND: node scripts/check-localization.mjs
+Localization checks passed: 80 bilingual keys, 93 Swift lookups, both samples and resource configuration.
+EXIT: 0
+COMMAND: node MDNoteCore/Tests/parity/hash_parity.mjs
+hash parity OK: 8/8 cases match Swift golden values.
+EXIT: 0
+COMMAND: git diff HEAD --check
+EXIT: 0
+COMMAND: git status --short
+?? .omo/
+JUDGMENT: Localization and renderer hash regression checks pass; tracked code is committed. Native build, persistence restart, iPad layout, and VoiceOver remain UNVERIFIED because Swift/Xcode are unavailable. See report.md for scenario mapping; no native success claimed.

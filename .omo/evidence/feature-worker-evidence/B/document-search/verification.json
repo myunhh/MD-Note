@@ -1,0 +1,22 @@
+[
+  {
+    "invocation": [
+      "node",
+      "--check",
+      "MDNote/Resources/WebAssets/app/bridge.js"
+    ],
+    "exitCode": 0,
+    "stdout": "",
+    "stderr": ""
+  },
+  {
+    "invocation": [
+      "git",
+      "diff",
+      "--check"
+    ],
+    "exitCode": 0,
+    "stdout": "",
+    "stderr": ""
+  }
+]

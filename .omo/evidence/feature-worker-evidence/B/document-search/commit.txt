@@ -1,0 +1,19 @@
+commit 066d44604d155197c80f779cbec03817b3371edf
+Author:     myunhh <picomin1027@gmail.com>
+AuthorDate: Fri Oct 16 12:59:21 2026 +0900
+Commit:     myunhh <picomin1027@gmail.com>
+CommitDate: Fri Oct 16 12:59:21 2026 +0900
+
+    Add document search with layout-safe highlighting
+
+ MDNote/App/DocumentScreen.swift                    |  13 +++
+ MDNote/App/DocumentSearchView.swift                |  61 +++++++++++++
+ MDNote/Core/DocumentCanvasViewController.swift     |  33 +++++++
+ MDNote/Core/DocumentSession.swift                  |  16 ++++
+ MDNote/Core/MarkdownRenderer.swift                 |  13 +++
+ .../Localization/en.lproj/Localizable.strings      |  10 +++
+ .../Localization/ko.lproj/Localizable.strings      |  10 +++
+ MDNote/Resources/WebAssets/app/bridge.js           |  95 ++++++++++++++++++++
+ MDNote/Resources/WebAssets/app/theme.css           |  10 +++
+ scripts/check-document-search.mjs                  | 100 +++++++++++++++++++++
+ 10 files changed, 361 insertions(+)

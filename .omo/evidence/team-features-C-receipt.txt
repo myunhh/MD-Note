@@ -1,0 +1,28 @@
+Member C: bookmarks
+Commit: d02bfa31d301e7109193bb8bf8c12ddd530578e9
+Branch: team/team-7dc35eaa/C
+Worktree: C:/Users/picom/orca/MD-Note/.omo/teams/team-7dc35eaa/worktrees/C
+git status --short after commit: empty (clean).
+
+Executed validation from C worktree:
+node scripts/check-localization.mjs
+Localization checks passed: 87 bilingual keys, 104 Swift lookups, both samples and resource configuration.
+node MDNoteCore/Tests/parity/hash_parity.mjs
+hash parity OK: 8/8 cases match Swift golden values.
+git diff --check and git diff --staged --check: exit 0.
+swift test --package-path MDNoteCore: NOT RUN, swift: command not found.
+npm audit --offline: ENOLOCK (no npm lockfile; no dependencies added).
+
+Evidence manifest and captured logs:
+C:/Users/picom/orca/MD-Note/.omo/teams/team-7dc35eaa/worktrees/C/.omo/evidence/bookmarks/report.md
+Native QA checklist:
+C:/Users/picom/orca/MD-Note/.omo/teams/team-7dc35eaa/worktrees/C/docs/bookmarks-qa.md
+
+Implemented: separate versioned .bookmarks store, stable hash/sequence anchors with offset
+and fraction fallback, named multiple bookmarks, add/jump/rename/delete bilingual sheet,
+byte-safe errors and concurrent-writer rejection, library note/ink/bookmarks transaction,
+open-session external rename hooks. No ink schema changes.
+
+Eight native XCTest scenarios are written but not executed. Native build, Swift tests,
+iPad screenshots, VoiceOver, Reduce Motion and integrated trash/archive flows remain
+unverified on this Windows host. No native or visual PASS is claimed.

@@ -1,0 +1,14 @@
+D favorites-recents receipt. Commands run in assigned D worktree.
+UTC: 2026-10-16T03:59:25.7506863Z
+COMMAND: git rev-parse HEAD
+ee9c5dce2598c8609f1492c8512334b32a2202f7
+EXIT: 0
+COMMAND: node scripts/check-localization.mjs
+Localization checks passed: 80 bilingual keys, 93 Swift lookups, both samples and resource configuration.
+EXIT: 0
+COMMAND: node MDNoteCore/Tests/parity/hash_parity.mjs
+hash parity OK: 8/8 cases match Swift golden values.
+EXIT: 0
+COMMAND: git diff HEAD --check
+EXIT: 0
+Judgment: localization, actual bridge hash golden checks, whitespace checks pass. Native Swift build, persistence restart, iPad layout and VoiceOver remain UNVERIFIED; Swift/Xcode unavailable. Full report/source artifacts remain in D/.omo/evidence/favorites-recents. Root evidence-only write explicitly authorized by leader to satisfy hook cwd containment.

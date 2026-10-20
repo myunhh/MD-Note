@@ -1,0 +1,34 @@
+Final feature documentation verification
+UTC: 2026-10-16T04:09:42.0860065Z
+COMMAND: git rev-parse HEAD
+fd4489c6ebd5a92770db16e08de407abd85de966
+COMMAND: git diff --check -- README.md docs/feature-integration-qa.md
+EXIT: 0
+COMMAND: resolve local Markdown links in both edited documents
+PASS link: README.md -> docs/localization-navigation-qa.md
+PASS link: README.md -> docs/feature-integration-qa.md
+PASS link: docs/feature-integration-qa.md -> ../README.md
+COMMAND: confirm documented script/package/test paths exist
+PASS path: MDNoteCore/Package.swift
+PASS path: MDNoteCore/Tests/parity/hash_parity.mjs
+PASS path: scripts/check-localization.mjs
+PASS path: scripts/check-archive-contract.mjs
+PASS path: scripts/check-archive-renderer.mjs
+PASS path: scripts/check-document-search.mjs
+PASS path: Tests/ArchiveTests/NoteArchiveTests.swift
+PASS path: MDNote/Resources/WebAssets/app/bridge.js
+PASS path: project.yml
+SOURCE TRACE: native scheme/test target and browser environment
+project.yml:12:    exactVersion: 0.9.20
+project.yml:16:schemes:
+project.yml:23:        - MDNoteArchiveTests
+project.yml:26:  MDNoteArchiveTests:
+scripts/check-document-search.mjs:7:const evidence = resolve(root, process.env.MDNOTE_EVIDENCE_DIR || ".omo/evidence/document-search");
+scripts/check-document-search.mjs:8:assert.ok(process.env.MDNOTE_OMOWRIGHT_LOADER, "Set MDNOTE_OMOWRIGHT_LOADER to the installed browser skill's scripts/omowright.mjs");
+scripts/check-document-search.mjs:9:assert.ok(process.env.MDNOTE_CHROME, "Set MDNOTE_CHROME to Chrome's executable");
+scripts/check-document-search.mjs:10:const { loadOmowright } = await import(pathToFileURL(process.env.MDNOTE_OMOWRIGHT_LOADER).href);
+scripts/check-document-search.mjs:17:    browserPath: process.env.MDNOTE_CHROME,
+COMMAND: git diff --stat -- README.md
+ README.md | 24 ++++++++++++++++++++++--
+ 1 file changed, 22 insertions(+), 2 deletions(-)
+JUDGMENT: README root-relative Swift command corrected; six-feature Korean/English usage added; new integration QA document covers exact scripts, browser environment, MDNote scheme/archive target and native scenarios. All local links and referenced paths exist; whitespace check passes. Swift/Xcode/Pencil/native UI scenarios explicitly UNRUN on Windows. Only README.md and docs/feature-integration-qa.md product documentation edited. No staging/commit/merge/push.

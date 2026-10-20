@@ -1,0 +1,341 @@
+{
+  "schemaVersion": 3,
+  "transport": "multi_agent_v2",
+  "teamId": "a1b03b2c-a077-4a53-9d79-36dabc828a82",
+  "teamName": "mdnote-features",
+  "sessionName": "mdnote-six-features",
+  "sessionId": "team-7dc35eaa",
+  "threadTitleConvention": null,
+  "status": "archived",
+  "createdAt": "2026-10-16T03:52:26.007Z",
+  "updatedAt": "2026-10-16T04:12:16.168Z",
+  "archivedAt": "2026-10-16T04:12:16.168Z",
+  "leader": {
+    "kind": "main-session",
+    "sessionId": null,
+    "agentPath": "/root"
+  },
+  "communication": {
+    "memberLanguage": "english",
+    "replyToUserInUserLanguage": true
+  },
+  "worktree": {
+    "enabled": true,
+    "baseBranch": "main",
+    "root": "C:\\Users\\picom\\orca\\MD-Note\\.omo\\teams\\team-7dc35eaa\\worktrees"
+  },
+  "paths": {
+    "dir": "C:\\Users\\picom\\orca\\MD-Note\\.omo\\teams\\team-7dc35eaa",
+    "team": "C:\\Users\\picom\\orca\\MD-Note\\.omo\\teams\\team-7dc35eaa\\team.json",
+    "guide": "C:\\Users\\picom\\orca\\MD-Note\\.omo\\teams\\team-7dc35eaa\\guide.md",
+    "artifacts": "C:\\Users\\picom\\orca\\MD-Note\\.omo\\teams\\team-7dc35eaa\\artifacts"
+  },
+  "members": [
+    {
+      "id": "A",
+      "name": "trash",
+      "focus": "Library trash and safe restore",
+      "lens": "ownership",
+      "deliverable": "Implement reversible note/folder deletion, bilingual trash UI, safe collision restore; own TrashStore.swift, TrashView.swift and minimal LibraryView hooks.",
+      "taskName": "feature_trash",
+      "agentPath": "/root/feature_trash",
+      "threadId": null,
+      "threadTitle": null,
+      "cwd": null,
+      "worktree": {
+        "path": null,
+        "branch": "team/team-7dc35eaa/A"
+      },
+      "status": "archived"
+    },
+    {
+      "id": "B",
+      "name": "document-search",
+      "focus": "Search within open document",
+      "lens": "ownership",
+      "deliverable": "Implement bilingual document find controls, highlighting and next/previous navigation preserving ink block identity; own DocumentSearchView.swift and related renderer bridge/session/controller hooks.",
+      "taskName": "feature_document_search",
+      "agentPath": "/root/feature_document_search",
+      "threadId": null,
+      "threadTitle": null,
+      "cwd": null,
+      "worktree": {
+        "path": null,
+        "branch": "team/team-7dc35eaa/B"
+      },
+      "status": "archived"
+    },
+    {
+      "id": "C",
+      "name": "bookmarks",
+      "focus": "Document block bookmarks",
+      "lens": "ownership",
+      "deliverable": "Implement persisted named document bookmarks with navigation/removal and bilingual UI; own BookmarkStore.swift, BookmarksView.swift and minimal document hooks.",
+      "taskName": "feature_bookmarks",
+      "agentPath": "/root/feature_bookmarks",
+      "threadId": null,
+      "threadTitle": null,
+      "cwd": null,
+      "worktree": {
+        "path": null,
+        "branch": "team/team-7dc35eaa/C"
+      },
+      "status": "archived"
+    },
+    {
+      "id": "D",
+      "name": "favorites-recents",
+      "focus": "Library favorites and recent reading metadata",
+      "lens": "ownership",
+      "deliverable": "Implement favorites and recent-opened sorting persisted across launches and rename; own LibraryMetadataStore.swift and minimal library/open hooks.",
+      "taskName": "feature_favorites",
+      "agentPath": "/root/feature_favorites",
+      "threadId": null,
+      "threadTitle": null,
+      "cwd": "C:/Users/picom/orca/MD-Note",
+      "worktree": {
+        "path": null,
+        "branch": "team/team-7dc35eaa/D"
+      },
+      "status": "archived"
+    },
+    {
+      "id": "E",
+      "name": "library-search",
+      "focus": "Recursive full library search",
+      "lens": "ownership",
+      "deliverable": "Implement cancellable off-main recursive library search with paths and matches; own LibrarySearch.swift, LibrarySearchResultsView.swift and minimal LibraryView hooks.",
+      "taskName": "feature_library_search",
+      "agentPath": "/root/feature_library_search",
+      "threadId": null,
+      "threadTitle": null,
+      "cwd": null,
+      "worktree": {
+        "path": null,
+        "branch": "team/team-7dc35eaa/E"
+      },
+      "status": "archived"
+    },
+    {
+      "id": "F",
+      "name": "archive-transfer",
+      "focus": "Portable note archives including images",
+      "lens": "ownership",
+      "deliverable": "Implement safe package export including local images and direct ZIP import with staged extraction bounds; own NoteArchive.swift, project.yml dependency and minimal library/export hooks.",
+      "taskName": "feature_archive",
+      "agentPath": "/root/feature_archive",
+      "threadId": null,
+      "threadTitle": null,
+      "cwd": "C:/Users/picom/orca/MD-Note",
+      "worktree": {
+        "path": null,
+        "branch": "team/team-7dc35eaa/F"
+      },
+      "status": "archived"
+    },
+    {
+      "id": "R",
+      "name": "integration-review",
+      "focus": "Independent read-only review of merged six features",
+      "lens": "perspective",
+      "deliverable": "Concrete correctness security and cross-feature findings with evidence; no product edits",
+      "taskName": "review_feature_integration",
+      "agentPath": "/root/review_feature_integration",
+      "threadId": null,
+      "threadTitle": null,
+      "cwd": "C:/Users/picom/orca/MD-Note",
+      "worktree": {
+        "path": "C:/Users/picom/orca/MD-Note",
+        "branch": null
+      },
+      "status": "archived"
+    }
+  ],
+  "log": [
+    {
+      "ts": "2026-10-16T03:52:26.007Z",
+      "event": "created",
+      "detail": "team mdnote-features"
+    },
+    {
+      "ts": "2026-10-16T03:52:40.185Z",
+      "event": "add-member",
+      "detail": "member A (ownership): Library trash and safe restore"
+    },
+    {
+      "ts": "2026-10-16T03:52:41.356Z",
+      "event": "worktree-add",
+      "detail": "member A -> C:\\Users\\picom\\orca\\MD-Note\\.omo\\teams\\team-7dc35eaa\\worktrees\\A (team/team-7dc35eaa/A)"
+    },
+    {
+      "ts": "2026-10-16T03:52:42.346Z",
+      "event": "add-member",
+      "detail": "member B (ownership): Search within open document"
+    },
+    {
+      "ts": "2026-10-16T03:52:43.443Z",
+      "event": "worktree-add",
+      "detail": "member B -> C:\\Users\\picom\\orca\\MD-Note\\.omo\\teams\\team-7dc35eaa\\worktrees\\B (team/team-7dc35eaa/B)"
+    },
+    {
+      "ts": "2026-10-16T03:52:44.418Z",
+      "event": "add-member",
+      "detail": "member C (ownership): Document block bookmarks"
+    },
+    {
+      "ts": "2026-10-16T03:52:45.542Z",
+      "event": "worktree-add",
+      "detail": "member C -> C:\\Users\\picom\\orca\\MD-Note\\.omo\\teams\\team-7dc35eaa\\worktrees\\C (team/team-7dc35eaa/C)"
+    },
+    {
+      "ts": "2026-10-16T03:52:46.505Z",
+      "event": "add-member",
+      "detail": "member D (ownership): Library favorites and recent reading metadata"
+    },
+    {
+      "ts": "2026-10-16T03:52:47.614Z",
+      "event": "worktree-add",
+      "detail": "member D -> C:\\Users\\picom\\orca\\MD-Note\\.omo\\teams\\team-7dc35eaa\\worktrees\\D (team/team-7dc35eaa/D)"
+    },
+    {
+      "ts": "2026-10-16T03:52:48.548Z",
+      "event": "add-member",
+      "detail": "member E (ownership): Recursive full library search"
+    },
+    {
+      "ts": "2026-10-16T03:52:49.639Z",
+      "event": "worktree-add",
+      "detail": "member E -> C:\\Users\\picom\\orca\\MD-Note\\.omo\\teams\\team-7dc35eaa\\worktrees\\E (team/team-7dc35eaa/E)"
+    },
+    {
+      "ts": "2026-10-16T03:52:50.604Z",
+      "event": "add-member",
+      "detail": "member F (ownership): Portable note archives including images"
+    },
+    {
+      "ts": "2026-10-16T03:52:51.717Z",
+      "event": "worktree-add",
+      "detail": "member F -> C:\\Users\\picom\\orca\\MD-Note\\.omo\\teams\\team-7dc35eaa\\worktrees\\F (team/team-7dc35eaa/F)"
+    },
+    {
+      "ts": "2026-10-16T03:54:47.213Z",
+      "event": "bind-agent",
+      "detail": "member A -> agent /root/feature_trash"
+    },
+    {
+      "ts": "2026-10-16T03:54:48.285Z",
+      "event": "bind-agent",
+      "detail": "member B -> agent /root/feature_document_search"
+    },
+    {
+      "ts": "2026-10-16T03:54:49.330Z",
+      "event": "bind-agent",
+      "detail": "member C -> agent /root/feature_bookmarks"
+    },
+    {
+      "ts": "2026-10-16T03:54:50.205Z",
+      "event": "bind-agent",
+      "detail": "member D -> agent /root/feature_favorites"
+    },
+    {
+      "ts": "2026-10-16T03:54:51.088Z",
+      "event": "bind-agent",
+      "detail": "member E -> agent /root/feature_library_search"
+    },
+    {
+      "ts": "2026-10-16T03:54:51.969Z",
+      "event": "bind-agent",
+      "detail": "member F -> agent /root/feature_archive"
+    },
+    {
+      "ts": "2026-10-16T03:58:17.021Z",
+      "event": "set-status",
+      "detail": "member D -> reported: ee9c5dc source complete; Node checks pass; native unverified"
+    },
+    {
+      "ts": "2026-10-16T03:59:43.793Z",
+      "event": "set-status",
+      "detail": "member B -> reported: 066d446; 28 real DOM cases pass; native unverified"
+    },
+    {
+      "ts": "2026-10-16T03:59:49.049Z",
+      "event": "bind-agent",
+      "detail": "member D -> agent /root/feature_favorites"
+    },
+    {
+      "ts": "2026-10-16T04:00:37.122Z",
+      "event": "set-status",
+      "detail": "member E -> reported: ee073b9 Node checks pass; native unverified"
+    },
+    {
+      "ts": "2026-10-16T04:03:04.989Z",
+      "event": "set-status",
+      "detail": "member A -> reported: 3baac02; Node checks pass; native unverified"
+    },
+    {
+      "ts": "2026-10-16T04:04:07.725Z",
+      "event": "set-status",
+      "detail": "member C -> reported: d02bfa3 Node checks pass; native unverified"
+    },
+    {
+      "ts": "2026-10-16T04:05:11.590Z",
+      "event": "set-status",
+      "detail": "member F -> reported: 9d1abc0+65a01f5; parser checks pass; native unverified"
+    },
+    {
+      "ts": "2026-10-16T04:08:48.998Z",
+      "event": "add-member",
+      "detail": "member R (perspective): Independent read-only review of merged six features"
+    },
+    {
+      "ts": "2026-10-16T04:08:49.066Z",
+      "event": "bind-agent",
+      "detail": "member R -> agent /root/review_feature_integration"
+    },
+    {
+      "ts": "2026-10-16T04:10:09.592Z",
+      "event": "bind-agent",
+      "detail": "member F -> agent /root/feature_archive"
+    },
+    {
+      "ts": "2026-10-16T04:10:09.652Z",
+      "event": "set-status",
+      "detail": "member D -> reported: Integration and final docs complete; root docs pending commit"
+    },
+    {
+      "ts": "2026-10-16T04:10:20.479Z",
+      "event": "worktree-remove",
+      "detail": "member A"
+    },
+    {
+      "ts": "2026-10-16T04:10:20.641Z",
+      "event": "worktree-remove",
+      "detail": "member B"
+    },
+    {
+      "ts": "2026-10-16T04:10:20.821Z",
+      "event": "worktree-remove",
+      "detail": "member C"
+    },
+    {
+      "ts": "2026-10-16T04:10:20.984Z",
+      "event": "worktree-remove",
+      "detail": "member D"
+    },
+    {
+      "ts": "2026-10-16T04:10:21.144Z",
+      "event": "worktree-remove",
+      "detail": "member E"
+    },
+    {
+      "ts": "2026-10-16T04:10:21.320Z",
+      "event": "worktree-remove",
+      "detail": "member F"
+    },
+    {
+      "ts": "2026-10-16T04:12:16.168Z",
+      "event": "archive",
+      "detail": "All six branches integrated locally; independent correction review approved; native limits documented; worktrees removed and evidence preserved"
+    }
+  ]
+}

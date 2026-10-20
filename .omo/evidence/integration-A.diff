@@ -1,0 +1,135 @@
+diff --cc MDNote/Resources/Localization/en.lproj/Localizable.strings
+index 028d4f1,8f904d3..0000000
+--- a/MDNote/Resources/Localization/en.lproj/Localizable.strings
++++ b/MDNote/Resources/Localization/en.lproj/Localizable.strings
+@@@ -68,33 -68,18 +68,48 @@@
+  "inkPosition" = "Handwriting %ld · Near %ld pt in document";
+  "inkNumber" = "Handwriting %ld";
+  "orphanCount" = "Unanchored handwriting: %ld";
+ +"libraryMetadataAddFavorite" = "Add to Favorites";
+ +"libraryMetadataRemoveFavorite" = "Remove from Favorites";
+ +"libraryMetadataFavorite" = "Favorite";
+ +"libraryMetadataFavoritesOnly" = "Favorites Only";
+ +"libraryMetadataSortRecent" = "Recently Opened";
+ +"libraryMetadataSortAndFilter" = "Sort and Filter";
+ +"libraryMetadataAllNotes" = "All Notes";
+ +"libraryMetadataNoFavorites" = "No Matching Favorites";
+ +"libraryMetadataFavoritesHint" = "Add notes to Favorites from their menu, or turn off Favorites Only to see more notes.";
+ +"libraryMetadataShowAll" = "Show All Notes";
+ +"documentSearch.title" = "Find in Document";
+ +"documentSearch.prompt" = "Enter text to find";
+ +"documentSearch.searching" = "Searching…";
+ +"documentSearch.failed" = "Search unavailable. Try again.";
+ +"documentSearch.noMatches" = "No matches";
+ +"documentSearch.count" = "%ld of %ld";
+ +"documentSearch.clear" = "Clear document search";
+ +"documentSearch.previous" = "Previous match";
+ +"documentSearch.next" = "Next match";
+ +"documentSearch.close" = "Close document search";
+ +"librarySearchEntireLibrary" = "Entire library";
+ +"librarySearchCurrentFolder" = "Current folder";
+ +"librarySearchLoading" = "Searching the library…";
+ +"librarySearchFailed" = "Could not search the library";
+ +"librarySearchFailedDetail" = "Your documents could not be read. Try searching again.";
+ +"librarySearchRetry" = "Try again";
+ +"librarySearchCount" = "%ld matching notes";
+ +"librarySearchUnreadable" = "%ld files or folders could not be searched completely.";
+ +"librarySearchLarge" = "%ld files are larger than 8 MB. Only their names were searched.";
+ +"librarySearchNameMatch" = "Matched the note name. No text preview available.";
++ "trashTitle" = "Trash";
++ "trashMove" = "Move to Trash";
++ "trashRestore" = "Restore to Original Folder";
++ "trashRestoreRoot" = "Restore to Documents";
++ "trashDeleteForever" = "Delete Permanently";
++ "trashDeleteTitle" = "Delete permanently?";
++ "trashDeleteDetail" = "“%@” and its contents will be permanently deleted. This cannot be undone.";
++ "trashEmpty" = "Trash is empty";
++ "trashEmptyDetail" = "Notes and folders you move to Trash appear here until you restore or permanently delete them.";
++ "trashClose" = "Close";
++ "trashRetry" = "Reload Trash";
++ "trashMissingParent" = "The original folder no longer exists. Choose Restore to Documents to recover this item in your library.";
++ "trashRecoveryFailed" = "The move and its rollback could not finish. Your remaining files are retained in Documents and .Trash; keep them and recover them using Files before retrying.";
++ "trashInvalidItem" = "This trash item has invalid recovery information. Keep its files and recover them using Files.";
++ "trashOperationFailed" = "The trash operation could not finish: %@";
+diff --cc MDNote/Resources/Localization/ko.lproj/Localizable.strings
+index c2944f1,fd264cc..0000000
+--- a/MDNote/Resources/Localization/ko.lproj/Localizable.strings
++++ b/MDNote/Resources/Localization/ko.lproj/Localizable.strings
+@@@ -68,33 -68,18 +68,48 @@@
+  "inkPosition" = "손글씨 %ld · 문서 %ldpt 부근";
+  "inkNumber" = "손글씨 %ld";
+  "orphanCount" = "자리를 잃은 필기 %ld개";
+ +"libraryMetadataAddFavorite" = "즐겨찾기에 추가";
+ +"libraryMetadataRemoveFavorite" = "즐겨찾기에서 제거";
+ +"libraryMetadataFavorite" = "즐겨찾기";
+ +"libraryMetadataFavoritesOnly" = "즐겨찾기만";
+ +"libraryMetadataSortRecent" = "최근 열어본 순";
+ +"libraryMetadataSortAndFilter" = "정렬 및 필터";
+ +"libraryMetadataAllNotes" = "모든 노트";
+ +"libraryMetadataNoFavorites" = "일치하는 즐겨찾기가 없습니다";
+ +"libraryMetadataFavoritesHint" = "노트 메뉴에서 즐겨찾기에 추가하거나, 즐겨찾기만 보기를 끄면 더 많은 노트를 볼 수 있습니다.";
+ +"libraryMetadataShowAll" = "모든 노트 보기";
+ +"documentSearch.title" = "문서에서 찾기";
+ +"documentSearch.prompt" = "찾을 내용을 입력하세요";
+ +"documentSearch.searching" = "검색 중…";
+ +"documentSearch.failed" = "검색할 수 없습니다. 다시 시도하세요.";
+ +"documentSearch.noMatches" = "검색 결과 없음";
+ +"documentSearch.count" = "%ld / %ld";
+ +"documentSearch.clear" = "문서 검색 지우기";
+ +"documentSearch.previous" = "이전 검색 결과";
+ +"documentSearch.next" = "다음 검색 결과";
+ +"documentSearch.close" = "문서 검색 닫기";
+ +"librarySearchEntireLibrary" = "전체 보관함";
+ +"librarySearchCurrentFolder" = "현재 폴더";
+ +"librarySearchLoading" = "보관함 검색 중…";
+ +"librarySearchFailed" = "보관함을 검색할 수 없습니다";
+ +"librarySearchFailedDetail" = "문서를 읽을 수 없습니다. 다시 검색해 주세요.";
+ +"librarySearchRetry" = "다시 시도";
+ +"librarySearchCount" = "검색된 노트 %ld개";
+ +"librarySearchUnreadable" = "파일 또는 폴더 %ld개를 완전히 검색하지 못했습니다.";
+ +"librarySearchLarge" = "파일 %ld개가 8 MB보다 커서 이름만 검색했습니다.";
+ +"librarySearchNameMatch" = "노트 이름이 일치합니다. 본문 미리보기가 없습니다.";
++ "trashTitle" = "휴지통";
++ "trashMove" = "휴지통으로 이동";
++ "trashRestore" = "원래 폴더로 복원";
++ "trashRestoreRoot" = "문서 폴더로 복원";
++ "trashDeleteForever" = "영구 삭제";
++ "trashDeleteTitle" = "영구 삭제할까요?";
++ "trashDeleteDetail" = "‘%@’ 및 포함된 항목이 영구 삭제됩니다. 이 작업은 되돌릴 수 없습니다.";
++ "trashEmpty" = "휴지통이 비어 있습니다";
++ "trashEmptyDetail" = "휴지통으로 옮긴 노트와 폴더는 복원하거나 영구 삭제할 때까지 여기에 보관됩니다.";
++ "trashClose" = "닫기";
++ "trashRetry" = "휴지통 다시 불러오기";
++ "trashMissingParent" = "원래 폴더가 없어졌습니다. ‘문서 폴더로 복원’을 선택하면 문서 폴더에 복원됩니다.";
++ "trashRecoveryFailed" = "이동과 되돌리기를 완료하지 못했습니다. 남은 파일은 문서 폴더와 .Trash에 보관됩니다. 파일을 보존하고 파일 앱에서 복구한 후 다시 시도하세요.";
++ "trashInvalidItem" = "이 항목의 복원 정보가 올바르지 않습니다. 파일을 보존하고 파일 앱에서 복구하세요.";
++ "trashOperationFailed" = "휴지통 작업을 완료하지 못했습니다: %@";
+diff --git a/MDNote/App/LibraryView.swift b/MDNote/App/LibraryView.swift
+index d9e17f8..39f747a 100644
+--- a/MDNote/App/LibraryView.swift
++++ b/MDNote/App/LibraryView.swift
+@@ -481,6 +481,7 @@ struct LibraryView: View {
+                                        root: LibraryStore.documentsURL)
+         }
+         .onChange(of: store.documents) { _, _ in searchRevision += 1 }
++        .onChange(of: store.folders) { _, _ in searchRevision += 1 }
+         .toolbar {
+             ToolbarItem(placement: .topBarTrailing) {
+                 Menu {
+@@ -533,8 +534,14 @@ struct LibraryView: View {
+             if importIsFolder { urls.forEach(store.importFolder) }
+             else { urls.forEach(store.importFile) }
+         }
+-        .sheet(isPresented: $showTrash, onDismiss: { store.load(directory: directory) }) { TrashView() }
+-        .onAppear { store.load(directory: directory) }
++        .sheet(isPresented: $showTrash, onDismiss: {
++            store.load(directory: directory)
++            searchRevision += 1
++        }) { TrashView() }
++        .onAppear {
++            store.load(directory: directory)
++            searchRevision += 1
++        }
+         .onReceive(NotificationCenter.default.publisher(
+             for: UIApplication.willEnterForegroundNotification)) { _ in
+             store.load(directory: directory)

@@ -1,0 +1,7 @@
+ MDNote/App/DocumentScreen.swift                    |  7 ++
+ MDNote/App/LibraryView.swift                       | 31 +++++++--
+ MDNote/Core/DocumentCanvasViewController.swift     | 77 ++++++++++++++++++++++
+ MDNote/Core/DocumentSession.swift                  |  4 ++
+ .../Localization/en.lproj/Localizable.strings      | 17 +++++
+ .../Localization/ko.lproj/Localizable.strings      | 17 +++++
+ 6 files changed, 147 insertions(+), 6 deletions(-)

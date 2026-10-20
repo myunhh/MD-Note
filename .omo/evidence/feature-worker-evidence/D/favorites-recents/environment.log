@@ -1,0 +1,5 @@
+swift = UNAVAILABLE
+sourcekit-lsp = UNAVAILABLE
+xcodebuild = UNAVAILABLE
+xcrun = UNAVAILABLE
+node = C:\Program Files\nodejs\node.exe

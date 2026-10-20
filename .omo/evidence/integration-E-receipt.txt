@@ -1,0 +1,26 @@
+E merge favorites/search integration final verification
+UTC: 2026-10-16T04:02:44.0313932Z
+COMMAND: node .omo/evidence/integration-E-localization.mjs
+PASS en: all 100 union keys retained; values unchanged except two authorized scope-copy keys; no markers.
+PASS ko: all 100 union keys retained; values unchanged except two authorized scope-copy keys; no markers.
+PASS no conflict markers: MDNote/App/LibraryView.swift
+PASS no conflict markers: MDNote/App/LibrarySearchResultsView.swift
+EXIT: 0
+COMMAND: node scripts/check-localization.mjs
+Localization checks passed: 100 bilingual keys, 121 Swift lookups, both samples and resource configuration.
+EXIT: 0
+COMMAND: node MDNoteCore/Tests/parity/hash_parity.mjs
+hash parity OK: 8/8 cases match Swift golden values.
+EXIT: 0
+COMMAND: git diff --check
+EXIT: 0
+SOURCE TRACE: caller root aliases preserved while canonical containment stays
+MDNoteCore/Sources/MDNoteCore/LibrarySearch.swift:38:        let resultRoot = root.standardizedFileURL
+MDNoteCore/Sources/MDNoteCore/LibrarySearch.swift:39:        let root = resultRoot.resolvingSymlinksInPath()
+MDNoteCore/Sources/MDNoteCore/LibrarySearch.swift:55:        let rootPrefix = root.path.hasSuffix("/") ? root.path : root.path + "/"
+MDNoteCore/Sources/MDNoteCore/LibrarySearch.swift:67:                  url.resolvingSymlinksInPath().path.hasPrefix(rootPrefix) else {
+MDNoteCore/Sources/MDNoteCore/LibrarySearch.swift:98:            let relativePath = String(url.path.dropFirst(rootPrefix.count))
+MDNoteCore/Sources/MDNoteCore/LibrarySearch.swift:100:                url: resultRoot.appendingPathComponent(relativePath), name: name,
+MDNoteCore/Sources/MDNoteCore/LibrarySearch.swift:101:                relativePath: relativePath,
+MDNoteCore/Tests/MDNoteCoreTests/LibrarySearchTests.swift:82:    func testSearchResultsPreserveRequestedRootAliasForDocumentPreferences() throws {
+JUDGMENT: Conflict and localization checks PASS, hash 8/8 PASS. Favorites filter and all sort modes wired to both scopes; result favorite menu/star/VoiceOver added. Alias root source fix and focused Swift regression added; Swift test and native UI UNVERIFIED because toolchain unavailable. See integration-E-native-scenarios.md. No git stage/commit/merge/abort.

@@ -1,0 +1,9 @@
+ MDNote/App/DocumentScreen.swift                    | 13 +++
+ MDNote/Core/DocumentCanvasViewController.swift     | 33 ++++++++
+ MDNote/Core/DocumentSession.swift                  | 16 ++++
+ MDNote/Core/MarkdownRenderer.swift                 | 13 +++
+ .../Localization/en.lproj/Localizable.strings      | 10 +++
+ .../Localization/ko.lproj/Localizable.strings      | 10 +++
+ MDNote/Resources/WebAssets/app/bridge.js           | 95 ++++++++++++++++++++++
+ MDNote/Resources/WebAssets/app/theme.css           | 10 +++
+ 8 files changed, 200 insertions(+)

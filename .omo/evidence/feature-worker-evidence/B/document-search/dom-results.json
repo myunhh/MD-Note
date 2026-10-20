@@ -1,0 +1,114 @@
+[
+  {
+    "name": "case insensitive count",
+    "passed": true
+  },
+  {
+    "name": "next wrap",
+    "passed": true
+  },
+  {
+    "name": "previous wrap",
+    "passed": true
+  },
+  {
+    "name": "native navigation coordinate returned without web scroll",
+    "passed": true
+  },
+  {
+    "name": "across inline text nodes",
+    "passed": true
+  },
+  {
+    "name": "Korean matches",
+    "passed": true
+  },
+  {
+    "name": "literal regex metacharacters",
+    "passed": true
+  },
+  {
+    "name": "literal HTML metacharacters",
+    "passed": true
+  },
+  {
+    "name": "Unicode offset after expanding lowercase character",
+    "passed": true
+  },
+  {
+    "name": "no matches",
+    "passed": true
+  },
+  {
+    "name": "CSS Highlight holds matching range",
+    "passed": true
+  },
+  {
+    "name": "stale request ignored",
+    "passed": true
+  },
+  {
+    "name": "hash geometry parity during highlights",
+    "passed": true
+  },
+  {
+    "name": "source DOM unchanged during highlights",
+    "passed": true
+  },
+  {
+    "name": "height unchanged during highlights",
+    "passed": true
+  },
+  {
+    "name": "clear removes CSS highlights",
+    "passed": true
+  },
+  {
+    "name": "fallback contains active paint",
+    "passed": true
+  },
+  {
+    "name": "fallback excluded from content and accessibility",
+    "passed": true
+  },
+  {
+    "name": "fallback preserves hash geometry and height",
+    "passed": true
+  },
+  {
+    "name": "clear removes fallback",
+    "passed": true
+  },
+  {
+    "name": "rerender reapplies query to new DOM",
+    "passed": true
+  },
+  {
+    "name": "rerender clears missing matches",
+    "passed": true
+  },
+  {
+    "name": "empty document",
+    "passed": true
+  },
+  {
+    "name": "hard line breaks do not concatenate words",
+    "passed": true
+  },
+  {
+    "name": "paragraph boundaries do not concatenate words",
+    "passed": true
+  },
+  {
+    "name": "astral and accented text",
+    "passed": true
+  },
+  {
+    "name": "query treated only as literal text",
+    "passed": true
+  },
+  {
+    "name": "fallback refresh after text scaling",
+    "passed": true
+  }
+]

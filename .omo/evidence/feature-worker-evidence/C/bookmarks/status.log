@@ -1,0 +1,11 @@
+ M MDNote/App/DocumentScreen.swift
+ M MDNote/App/LibraryView.swift
+ M MDNote/Core/DocumentCanvasViewController.swift
+ M MDNote/Core/DocumentSession.swift
+ M MDNote/Resources/Localization/en.lproj/Localizable.strings
+ M MDNote/Resources/Localization/ko.lproj/Localizable.strings
+?? .omo/
+?? MDNote/App/BookmarksView.swift
+?? MDNoteCore/Sources/MDNoteCore/BookmarkStore.swift
+?? MDNoteCore/Tests/MDNoteCoreTests/BookmarkStoreTests.swift
+?? docs/bookmarks-qa.md

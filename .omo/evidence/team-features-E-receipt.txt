@@ -1,0 +1,52 @@
+Member E: recursive library search
+Commit: ee073b9ec08c876253a8d67056ffa98903ed365b
+Message: Add recursive library search with scoped results
+Branch: team/team-7dc35eaa/E
+Worktree: C:/Users/picom/orca/MD-Note/.omo/teams/team-7dc35eaa/worktrees/E
+
+Fresh post-commit checks executed in that worktree on 2026-10-16:
+
+node scripts/check-localization.mjs
+Exit: 0
+Localization checks passed: 80 bilingual keys, 93 Swift lookups, both samples and resource configuration.
+Artifact: .omo/teams/team-7dc35eaa/worktrees/E/.omo/evidence/library-search/localization.log
+
+node MDNoteCore/Tests/parity/hash_parity.mjs
+Exit: 0
+hash parity OK: 8/8 cases match Swift golden values.
+Artifact: .omo/teams/team-7dc35eaa/worktrees/E/.omo/evidence/library-search/hash-parity.log
+
+swift test --package-path MDNoteCore --filter LibrarySearchTests
+Exit: 127
+/usr/bin/bash: line 1: swift: command not found
+Artifact: .omo/teams/team-7dc35eaa/worktrees/E/.omo/evidence/library-search/swift-tests.log
+The 11 real temp-directory XCTest cases were added but could not execute. No native pass is claimed.
+
+git show --format= --check HEAD
+Exit: 0; no whitespace diagnostics.
+git status --short
+Only: ?? .omo/
+Product files are committed; evidence remains untracked.
+
+npm audit --json (pre-commit)
+Exit: 1; ENOLOCK, repository has no package manifest or lockfile.
+Artifact: .omo/teams/team-7dc35eaa/worktrees/E/.omo/evidence/library-search/npm-audit.json
+
+Changed product files (six):
+MDNoteCore/Sources/MDNoteCore/LibrarySearch.swift
+MDNoteCore/Tests/MDNoteCoreTests/LibrarySearchTests.swift
+MDNote/App/LibrarySearchResultsView.swift
+MDNote/App/LibraryView.swift
+MDNote/Resources/Localization/en.lproj/Localizable.strings
+MDNote/Resources/Localization/ko.lproj/Localizable.strings
+
+Implementation: explicit current-folder/entire-library scope; whole Documents-root descendant name/body search; 250 ms debounce; detached bounded filesystem reads; cancellation forwarding and request-ID stale-result guard; readable match snippets and relative file paths; existing LibraryDoc direct navigation; loading, empty, retry, and partial-search notices. Hidden/.Trash, ink/bookmark sidecars, non-document extensions, and all symlinks are excluded. Bodies over 8 MiB are name-only with a notice.
+
+Integration: visibleSearchResults in LibraryView is the small sorting/filter hook. D changed favorites copy to current-folder-only, so recursive results currently remain independent. E supports name/modified sorting; root should add D's recent comparator using metadata.lastOpenedDate(match.url) if recent must apply globally. Existing NavigationLink(value: LibraryDoc) should retain D's centralized open tracking. All ten resource keys use librarySearch prefix. No project/dependency changes.
+
+Full acceptance ledger, exact scenario names, expected binary observables, source review and integration details:
+.omo/teams/team-7dc35eaa/worktrees/E/.omo/evidence/library-search/REPORT.md
+Full reviewed patch:
+.omo/teams/team-7dc35eaa/worktrees/E/.omo/evidence/library-search/staged.patch
+
+Limits: Swift/SourceKit/Xcode/iOS simulator unavailable. Native build, XCTest execution, actual navigation/stale-query interaction, screenshots, CJK layout, and accessibility remain unverified. No tools were installed and no global configuration was changed. This receipt records actual available checks, not native feature completion.

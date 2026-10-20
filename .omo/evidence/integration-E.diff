@@ -1,0 +1,307 @@
+diff --cc MDNote/App/LibraryView.swift
+index 7b2f112,c4f0c20..0000000
+--- a/MDNote/App/LibraryView.swift
++++ b/MDNote/App/LibraryView.swift
+@@@ -330,7 -329,7 +331,8 @@@ struct LibraryView: View 
+      let directory: URL
+      @Binding var path: NavigationPath
+      @StateObject private var store = LibraryStore()
+ +    @ObservedObject private var metadata = LibraryMetadataStore.shared
++     @StateObject private var librarySearch = LibrarySearchModel()
+  
+      @State private var showImporter = false
+      @State private var importIsFolder = false
+@@@ -340,56 -339,51 +342,83 @@@
+      @State private var promptText = ""
+      @State private var promptAction: (String) -> Void = { _ in }
+      @State private var searchText = ""
++     @State private var searchScope = LibrarySearchScope.entireLibrary
++     @State private var searchRevision = 0
+      @AppStorage("librarySort") private var sortOrder = "modified"
+ +    @AppStorage("libraryMetadataFavoritesOnly") private var favoritesOnly = false
+  
+      private let columns = [GridItem(.adaptive(minimum: 165, maximum: 220), spacing: 22)]
+      private var isRoot: Bool { directory.standardizedFileURL == LibraryStore.documentsURL.standardizedFileURL }
+  
++     private var trimmedSearchText: String { searchText.trimmingCharacters(in: .whitespacesAndNewlines) }
++     private var searchesEntireLibrary: Bool { searchScope == .entireLibrary && !trimmedSearchText.isEmpty }
++     private var searchRequest: LibrarySearchRequest {
++         LibrarySearchRequest(query: trimmedSearchText, scope: searchScope, revision: searchRevision)
++     }
++ 
++     private var visibleSearchResults: [LibrarySearchMatch] {
+ -        librarySearch.report.matches.sorted {
+ -            if sortOrder != "name", $0.modified != $1.modified { return $0.modified > $1.modified }
+ -            let nameOrder = $0.name.localizedCaseInsensitiveCompare($1.name)
+ -            return nameOrder == .orderedSame ? $0.relativePath < $1.relativePath : nameOrder == .orderedAscending
+++        librarySearch.report.matches.filter { !favoritesOnly || metadata.isFavorite($0.url) }.sorted { lhs, rhs in
+++            if sortOrder == "recent" {
+++                let left = metadata.lastOpenedDate(lhs.url) ?? .distantPast
+++                let right = metadata.lastOpenedDate(rhs.url) ?? .distantPast
+++                if left != right { return left > right }
+++            } else if sortOrder != "name", lhs.modified != rhs.modified {
+++                return lhs.modified > rhs.modified
+++            }
+++            let nameOrder = lhs.name.localizedCaseInsensitiveCompare(rhs.name)
+++            return nameOrder == .orderedSame ? lhs.relativePath < rhs.relativePath : nameOrder == .orderedAscending
++         }
++     }
++ 
+      private var visibleFolders: [LibraryFolder] {
+ +        guard !favoritesOnly else { return [] }
+-         guard !searchText.isEmpty else { return store.folders }
+-         return store.folders.filter { $0.name.localizedCaseInsensitiveContains(searchText) }
++         guard !trimmedSearchText.isEmpty else { return store.folders }
++         return store.folders.filter { $0.name.localizedCaseInsensitiveContains(trimmedSearchText) }
+      }
+  
+      private var visibleDocuments: [LibraryDoc] {
+          var docs = store.documents
+ +        if favoritesOnly { docs = docs.filter { metadata.isFavorite($0.url) } }
+-         if !searchText.isEmpty {
+-             let q = searchText.lowercased()
++         if !trimmedSearchText.isEmpty {
++             let q = trimmedSearchText.lowercased()
+              docs = docs.filter {
+-                 $0.name.localizedCaseInsensitiveContains(searchText) || $0.searchText.contains(q)
++                 $0.name.localizedCaseInsensitiveContains(trimmedSearchText) || $0.searchText.contains(q)
+              }
+          }
+ -        if sortOrder == "name" {
+ -            docs.sort { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
+ +        docs.sort { lhs, rhs in
+ +            if sortOrder == "recent" {
+ +                let left = metadata.lastOpenedDate(lhs.url) ?? .distantPast
+ +                let right = metadata.lastOpenedDate(rhs.url) ?? .distantPast
+ +                if left != right { return left > right }
+ +            } else if sortOrder != "name", lhs.modified != rhs.modified {
+ +                return lhs.modified > rhs.modified
+ +            }
+ +            let nameOrder = lhs.name.localizedCaseInsensitiveCompare(rhs.name)
+ +            if nameOrder != .orderedSame { return nameOrder == .orderedAscending }
+ +            return LibraryStore.relativeKey(for: lhs.url) < LibraryStore.relativeKey(for: rhs.url)
+          }
+          return docs
+      }
+  
+      var body: some View {
+          ScrollView {
+-             if favoritesOnly && visibleDocuments.isEmpty {
++             if searchesEntireLibrary {
++                 LibrarySearchResultsView(model: librarySearch, query: trimmedSearchText,
+ -                                         matches: visibleSearchResults) { searchRevision += 1 }
+++                                         matches: visibleSearchResults, favoritesOnly: $favoritesOnly) {
+++                    searchRevision += 1
+++                }
+++            } else if favoritesOnly && visibleDocuments.isEmpty {
+ +                ContentUnavailableView {
+ +                    Label(L10n.text("libraryMetadataNoFavorites"), systemImage: "star")
+ +                } description: {
+ +                    Text(L10n.text("libraryMetadataFavoritesHint"))
+ +                } actions: {
+ +                    Button(L10n.text("libraryMetadataShowAll")) {
+ +                        favoritesOnly = false
+ +                        searchText = ""
+ +                    }
+ +                }
+ +                .padding(.top, 80)
+              } else if store.folders.isEmpty && store.documents.isEmpty {
+                  VStack(spacing: 16) {
+                      Image(systemName: "doc.text.image")
+diff --cc MDNote/Resources/Localization/en.lproj/Localizable.strings
+index 268c8a1,e6f2055..0000000
+--- a/MDNote/Resources/Localization/en.lproj/Localizable.strings
++++ b/MDNote/Resources/Localization/en.lproj/Localizable.strings
+@@@ -68,23 -68,13 +68,33 @@@
+  "inkPosition" = "Handwriting %ld · Near %ld pt in document";
+  "inkNumber" = "Handwriting %ld";
+  "orphanCount" = "Unanchored handwriting: %ld";
+ +"libraryMetadataAddFavorite" = "Add to Favorites";
+ +"libraryMetadataRemoveFavorite" = "Remove from Favorites";
+ +"libraryMetadataFavorite" = "Favorite";
+- "libraryMetadataFavoritesOnly" = "Favorites in This Folder";
+++"libraryMetadataFavoritesOnly" = "Favorites Only";
+ +"libraryMetadataSortRecent" = "Recently Opened";
+ +"libraryMetadataSortAndFilter" = "Sort and Filter";
+ +"libraryMetadataAllNotes" = "All Notes";
+ +"libraryMetadataNoFavorites" = "No Matching Favorites";
+- "libraryMetadataFavoritesHint" = "Add notes to Favorites from their menu. Favorites here are limited to this folder and your search.";
+++"libraryMetadataFavoritesHint" = "Add notes to Favorites from their menu, or turn off Favorites Only to see more notes.";
+ +"libraryMetadataShowAll" = "Show All Notes";
+ +"documentSearch.title" = "Find in Document";
+ +"documentSearch.prompt" = "Enter text to find";
+ +"documentSearch.searching" = "Searching…";
+ +"documentSearch.failed" = "Search unavailable. Try again.";
+ +"documentSearch.noMatches" = "No matches";
+ +"documentSearch.count" = "%ld of %ld";
+ +"documentSearch.clear" = "Clear document search";
+ +"documentSearch.previous" = "Previous match";
+ +"documentSearch.next" = "Next match";
+ +"documentSearch.close" = "Close document search";
++ "librarySearchEntireLibrary" = "Entire library";
++ "librarySearchCurrentFolder" = "Current folder";
++ "librarySearchLoading" = "Searching the library…";
++ "librarySearchFailed" = "Could not search the library";
++ "librarySearchFailedDetail" = "Your documents could not be read. Try searching again.";
++ "librarySearchRetry" = "Try again";
++ "librarySearchCount" = "%ld matching notes";
++ "librarySearchUnreadable" = "%ld files or folders could not be searched completely.";
++ "librarySearchLarge" = "%ld files are larger than 8 MB. Only their names were searched.";
++ "librarySearchNameMatch" = "Matched the note name. No text preview available.";
+diff --cc MDNote/Resources/Localization/ko.lproj/Localizable.strings
+index 3d7e21f,d47eb62..0000000
+--- a/MDNote/Resources/Localization/ko.lproj/Localizable.strings
++++ b/MDNote/Resources/Localization/ko.lproj/Localizable.strings
+@@@ -68,23 -68,13 +68,33 @@@
+  "inkPosition" = "손글씨 %ld · 문서 %ldpt 부근";
+  "inkNumber" = "손글씨 %ld";
+  "orphanCount" = "자리를 잃은 필기 %ld개";
+ +"libraryMetadataAddFavorite" = "즐겨찾기에 추가";
+ +"libraryMetadataRemoveFavorite" = "즐겨찾기에서 제거";
+ +"libraryMetadataFavorite" = "즐겨찾기";
+- "libraryMetadataFavoritesOnly" = "이 폴더의 즐겨찾기";
+++"libraryMetadataFavoritesOnly" = "즐겨찾기만";
+ +"libraryMetadataSortRecent" = "최근 열어본 순";
+ +"libraryMetadataSortAndFilter" = "정렬 및 필터";
+ +"libraryMetadataAllNotes" = "모든 노트";
+ +"libraryMetadataNoFavorites" = "일치하는 즐겨찾기가 없습니다";
+- "libraryMetadataFavoritesHint" = "노트 메뉴에서 즐겨찾기에 추가하세요. 이 폴더와 검색 조건에 맞는 즐겨찾기만 표시됩니다.";
+++"libraryMetadataFavoritesHint" = "노트 메뉴에서 즐겨찾기에 추가하거나, 즐겨찾기만 보기를 끄면 더 많은 노트를 볼 수 있습니다.";
+ +"libraryMetadataShowAll" = "모든 노트 보기";
+ +"documentSearch.title" = "문서에서 찾기";
+ +"documentSearch.prompt" = "찾을 내용을 입력하세요";
+ +"documentSearch.searching" = "검색 중…";
+ +"documentSearch.failed" = "검색할 수 없습니다. 다시 시도하세요.";
+ +"documentSearch.noMatches" = "검색 결과 없음";
+ +"documentSearch.count" = "%ld / %ld";
+ +"documentSearch.clear" = "문서 검색 지우기";
+ +"documentSearch.previous" = "이전 검색 결과";
+ +"documentSearch.next" = "다음 검색 결과";
+ +"documentSearch.close" = "문서 검색 닫기";
++ "librarySearchEntireLibrary" = "전체 보관함";
++ "librarySearchCurrentFolder" = "현재 폴더";
++ "librarySearchLoading" = "보관함 검색 중…";
++ "librarySearchFailed" = "보관함을 검색할 수 없습니다";
++ "librarySearchFailedDetail" = "문서를 읽을 수 없습니다. 다시 검색해 주세요.";
++ "librarySearchRetry" = "다시 시도";
++ "librarySearchCount" = "검색된 노트 %ld개";
++ "librarySearchUnreadable" = "파일 또는 폴더 %ld개를 완전히 검색하지 못했습니다.";
++ "librarySearchLarge" = "파일 %ld개가 8 MB보다 커서 이름만 검색했습니다.";
++ "librarySearchNameMatch" = "노트 이름이 일치합니다. 본문 미리보기가 없습니다.";
+diff --git a/MDNote/App/LibrarySearchResultsView.swift b/MDNote/App/LibrarySearchResultsView.swift
+index bdaee29..264e381 100644
+--- a/MDNote/App/LibrarySearchResultsView.swift
++++ b/MDNote/App/LibrarySearchResultsView.swift
+@@ -54,8 +54,10 @@ final class LibrarySearchModel: ObservableObject {
+ 
+ struct LibrarySearchResultsView: View {
+     @ObservedObject var model: LibrarySearchModel
++    @ObservedObject private var metadata = LibraryMetadataStore.shared
+     let query: String
+     let matches: [LibrarySearchMatch]
++    @Binding var favoritesOnly: Bool
+     let retry: () -> Void
+ 
+     var body: some View {
+@@ -86,7 +88,17 @@ struct LibrarySearchResultsView: View {
+                         .font(.footnote).foregroundStyle(.secondary)
+                 }
+                 if matches.isEmpty {
+-                    ContentUnavailableView.search(text: query)
++                    if favoritesOnly {
++                        ContentUnavailableView {
++                            Label(L10n.text("libraryMetadataNoFavorites"), systemImage: "star")
++                        } description: {
++                            Text(L10n.text("libraryMetadataFavoritesHint"))
++                        } actions: {
++                            Button(L10n.text("libraryMetadataShowAll")) { favoritesOnly = false }
++                        }
++                    } else {
++                        ContentUnavailableView.search(text: query)
++                    }
+                 } else {
+                     LazyVStack(spacing: 12) {
+                         ForEach(matches) { match in
+@@ -95,7 +107,14 @@ struct LibrarySearchResultsView: View {
+                                 modified: match.modified, searchText: ""
+                             )) {
+                                 VStack(alignment: .leading, spacing: 8) {
+-                                    Text(match.name).font(.headline).foregroundStyle(.primary)
++                                    HStack(spacing: 5) {
++                                        Text(match.name).font(.headline).foregroundStyle(.primary)
++                                        if metadata.isFavorite(match.url) {
++                                            Image(systemName: "star.fill")
++                                                .foregroundStyle(Color.mdAccent)
++                                                .accessibilityHidden(true)
++                                        }
++                                    }
+                                     Text(match.relativePath).font(.caption).foregroundStyle(.secondary)
+                                     Text(match.snippet.isEmpty ? L10n.text("librarySearchNameMatch") : match.snippet)
+                                         .font(.subheadline).foregroundStyle(.secondary).lineLimit(3)
+@@ -107,6 +126,16 @@ struct LibrarySearchResultsView: View {
+                                 .contentShape(Rectangle())
+                             }
+                             .buttonStyle(.plain)
++                            .accessibilityElement(children: .combine)
++                            .accessibilityValue(metadata.isFavorite(match.url) ? L10n.text("libraryMetadataFavorite") : "")
++                            .contextMenu {
++                                Button { metadata.toggleFavorite(match.url) } label: {
++                                    Label(metadata.isFavorite(match.url)
++                                          ? L10n.text("libraryMetadataRemoveFavorite")
++                                          : L10n.text("libraryMetadataAddFavorite"),
++                                          systemImage: metadata.isFavorite(match.url) ? "star.slash" : "star")
++                                }
++                            }
+                         }
+                     }
+                 }
+diff --git a/MDNoteCore/Sources/MDNoteCore/LibrarySearch.swift b/MDNoteCore/Sources/MDNoteCore/LibrarySearch.swift
+index f77b0d6..7b5f52b 100644
+--- a/MDNoteCore/Sources/MDNoteCore/LibrarySearch.swift
++++ b/MDNoteCore/Sources/MDNoteCore/LibrarySearch.swift
+@@ -35,7 +35,8 @@ public enum LibrarySearch {
+         try checkCancellation()
+         let query = query.trimmingCharacters(in: .whitespacesAndNewlines)
+         guard !query.isEmpty else { return LibrarySearchReport() }
+-        let root = root.standardizedFileURL.resolvingSymlinksInPath()
++        let resultRoot = root.standardizedFileURL
++        let root = resultRoot.resolvingSymlinksInPath()
+         guard (try? root.resourceValues(forKeys: [.isDirectoryKey]))?.isDirectory == true else {
+             throw LibrarySearchError.unavailableRoot
+         }
+@@ -94,9 +95,10 @@ public enum LibrarySearch {
+             try checkCancellation()
+             let bodyRange = body?.range(of: query, options: .caseInsensitive)
+             guard nameMatches || bodyRange != nil else { continue }
++            let relativePath = String(url.path.dropFirst(rootPrefix.count))
+             report.matches.append(LibrarySearchMatch(
+-                url: url, name: name,
+-                relativePath: String(url.path.dropFirst(rootPrefix.count)),
++                url: resultRoot.appendingPathComponent(relativePath), name: name,
++                relativePath: relativePath,
+                 snippet: body.map { snippet(in: $0, around: bodyRange) } ?? "",
+                 modified: values.contentModificationDate ?? .distantPast
+             ))
+diff --git a/MDNoteCore/Tests/MDNoteCoreTests/LibrarySearchTests.swift b/MDNoteCore/Tests/MDNoteCoreTests/LibrarySearchTests.swift
+index 6482032..9ba47e5 100644
+--- a/MDNoteCore/Tests/MDNoteCoreTests/LibrarySearchTests.swift
++++ b/MDNoteCore/Tests/MDNoteCoreTests/LibrarySearchTests.swift
+@@ -79,6 +79,18 @@ final class LibrarySearchTests: XCTestCase {
+         XCTAssertEqual(report.matches.first?.snippet, "")
+     }
+ 
++    func testSearchResultsPreserveRequestedRootAliasForDocumentPreferences() throws {
++        try write("Folder/Note.md", "needle")
++        let alias = root.appendingPathComponent("library-alias")
++        try FileManager.default.createSymbolicLink(at: alias, withDestinationURL: root)
++        let report = try LibrarySearch.search(root: alias, query: "needle")
++        let match = try XCTUnwrap(report.matches.first)
++        XCTAssertEqual(report.matches.count, 1)
++        XCTAssertEqual(match.relativePath, "Folder/Note.md")
++        XCTAssertEqual(match.url.standardizedFileURL, alias.appendingPathComponent("Folder/Note.md").standardizedFileURL)
++        XCTAssertEqual(try String(contentsOf: match.url, encoding: .utf8), "needle")
++    }
++
+     func testUnreadableUTF8IsReportedAndCanStillMatchByName() throws {
+         let url = try write("needle.md", "")
+         try Data([0xff, 0xfe, 0xfd]).write(to: url)
