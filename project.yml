@@ -52,6 +52,8 @@ targets:
     info:
       path: MDNote/Info.plist
       properties:
+        CFBundleShortVersionString: "$(MARKETING_VERSION)"
+        CFBundleVersion: "$(CURRENT_PROJECT_VERSION)"
         # Expose the app's Documents folder in the Files app ("On My iPad → MD Note")
         # and in Finder file sharing, so .md files + their image folders can be added.
         UIFileSharingEnabled: true
@@ -76,8 +78,8 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: com.mdnote.app
         PRODUCT_NAME: MD Note
         PRODUCT_MODULE_NAME: MDNote
-        MARKETING_VERSION: "1.0"
-        CURRENT_PROJECT_VERSION: "1"
+        MARKETING_VERSION: "3.0"
+        CURRENT_PROJECT_VERSION: "3"
         SWIFT_VERSION: "5.0"
         TARGETED_DEVICE_FAMILY: "2"
         GENERATE_INFOPLIST_FILE: NO
