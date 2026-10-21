@@ -1,0 +1,8 @@
+file:///C:/Users/picom/orca/MD-Note/scripts/check-archive-renderer.mjs:34
+assert.deepEqual(window.MDNote.composedImageSources([
+                               ^
+
+TypeError: window.MDNote.composedImageSources is not a function
+    at file:///C:/Users/picom/orca/MD-Note/scripts/check-archive-renderer.mjs:34:32
+
+Node.js v24.19.0

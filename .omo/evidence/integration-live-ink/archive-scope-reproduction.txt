@@ -1,0 +1,1 @@
+{"scenario":"main unclosed fence plus independently rendered supplement","oldConcatenated":[],"expected":["study.png"]}

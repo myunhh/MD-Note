@@ -1,0 +1,853 @@
+[
+  {
+    "markdown": "---\r\ntitle: 보존\r\n---\r\n\r\n# Heading\r\n\r\nOriginal **bold** text \r\n\r\n![ref][asset]\r\n\r\n[asset]: image.png\r\n\r\n| A | B |\r\n| - | - |\r\n| 1 | 2 |\r\n",
+    "revision": 1,
+    "composing": false,
+    "historyID": "6b18ec6d-9506-456d-9a41-d8c745124f2d",
+    "edits": [
+      {
+        "blockID": "1544db10-7823-4cda-9450-ee000dcd8a6c",
+        "startUTF16": 18,
+        "endUTF16": 18,
+        "insertedText": " ",
+        "oldText": "Original bold text"
+      }
+    ],
+    "mappings": []
+  },
+  {
+    "markdown": "---\r\ntitle: 보존\r\n---\r\n\r\n# Heading\r\n\r\nOriginal **bold** text 한\r\n\r\n![ref][asset]\r\n\r\n[asset]: image.png\r\n\r\n| A | B |\r\n| - | - |\r\n| 1 | 2 |\r\n",
+    "revision": 2,
+    "composing": false,
+    "historyID": "a5c68377-6bd6-48e7-98e2-eb4d2185e41b",
+    "edits": [
+      {
+        "blockID": "1544db10-7823-4cda-9450-ee000dcd8a6c",
+        "startUTF16": 19,
+        "endUTF16": 19,
+        "insertedText": "한",
+        "oldText": "Original bold text "
+      }
+    ],
+    "mappings": []
+  },
+  {
+    "markdown": "---\r\ntitle: 보존\r\n---\r\n\r\n# Heading\r\n\r\nOriginal **bold** text 한글\r\n\r\n![ref][asset]\r\n\r\n[asset]: image.png\r\n\r\n| A | B |\r\n| - | - |\r\n| 1 | 2 |\r\n",
+    "revision": 3,
+    "composing": false,
+    "historyID": "96e43a2a-25ac-4448-a02f-6ec8f9e73687",
+    "edits": [
+      {
+        "blockID": "1544db10-7823-4cda-9450-ee000dcd8a6c",
+        "startUTF16": 20,
+        "endUTF16": 20,
+        "insertedText": "글",
+        "oldText": "Original bold text 한"
+      }
+    ],
+    "mappings": []
+  },
+  {
+    "markdown": "---\r\ntitle: 보존\r\n---\r\n\r\n# Heading\r\n\r\nOriginal **bold** text\r\n\r\n![ref][asset]\r\n\r\n[asset]: image.png\r\n\r\n| A | B |\r\n| - | - |\r\n| 1 | 2 |\r\n",
+    "revision": 4,
+    "composing": false,
+    "historyID": "03da0b35-410d-4320-b368-f01ee5b3483c",
+    "edits": [
+      {
+        "blockID": "1544db10-7823-4cda-9450-ee000dcd8a6c",
+        "startUTF16": 18,
+        "endUTF16": 21,
+        "insertedText": "",
+        "oldText": "Original bold text 한글"
+      }
+    ],
+    "mappings": []
+  },
+  {
+    "markdown": "---\r\ntitle: 보존\r\n---\r\n\r\n# Heading\r\n\r\nOriginal **bold** text 한글\r\n\r\n![ref][asset]\r\n\r\n[asset]: image.png\r\n\r\n| A | B |\r\n| - | - |\r\n| 1 | 2 |\r\n",
+    "revision": 5,
+    "composing": false,
+    "historyID": "96e43a2a-25ac-4448-a02f-6ec8f9e73687",
+    "edits": [
+      {
+        "blockID": "1544db10-7823-4cda-9450-ee000dcd8a6c",
+        "startUTF16": 18,
+        "endUTF16": 18,
+        "insertedText": " 한글",
+        "oldText": "Original bold text"
+      }
+    ],
+    "mappings": []
+  },
+  {
+    "markdown": "---\r\ntitle: 보존\r\n---\r\n\r\n# Heading\r\n\r\nOriginal **bold** text 한글\r\n\r\n![ref][asset]\r\n\r\n[asset]: image.png\r\n\r\n| A | B |\r\n| - | - |\r\n| 1 | 2 |\r\n",
+    "revision": 6,
+    "composing": false,
+    "historyID": "96e43a2a-25ac-4448-a02f-6ec8f9e73687",
+    "edits": [],
+    "mappings": []
+  },
+  {
+    "markdown": "---\r\ntitle: 보존\r\n---\r\n\r\n# Heading\r\n\r\nOriginal **bold** text 한글\r\n\r\n![ref][asset]\r\n\r\n[asset]: image.png\r\n\r\n| A | B |\r\n| - | - |\r\n| 1 | 2 |\r\n",
+    "revision": 7,
+    "composing": false,
+    "historyID": "96e43a2a-25ac-4448-a02f-6ec8f9e73687",
+    "edits": [],
+    "mappings": []
+  },
+  {
+    "markdown": "First\n\nSecond",
+    "revision": 8,
+    "composing": false,
+    "historyID": "a88a6ca3-6f56-465b-bba3-fb2b5101a44d",
+    "edits": [],
+    "mappings": []
+  },
+  {
+    "markdown": "FirstSecond\n\n",
+    "revision": 9,
+    "composing": false,
+    "historyID": "7b4d8d0c-de30-4f94-be66-c53a65f4990b",
+    "edits": [
+      {
+        "blockID": "first",
+        "startUTF16": 5,
+        "endUTF16": 5,
+        "insertedText": "Second",
+        "oldText": "First"
+      }
+    ],
+    "mappings": [
+      {
+        "fromBlockID": "second",
+        "toBlockID": "first",
+        "fromStartUTF16": 0,
+        "fromEndUTF16": 6,
+        "offsetDeltaUTF16": 5,
+        "targetText": "FirstSecond"
+      }
+    ]
+  },
+  {
+    "markdown": "First\n\nSecond\n\n",
+    "revision": 10,
+    "composing": false,
+    "historyID": "32fc6a8c-dd52-46a3-a92a-11050d6def7d",
+    "edits": [],
+    "mappings": []
+  },
+  {
+    "markdown": "First\n\nSecond\n\n",
+    "revision": 11,
+    "composing": false,
+    "historyID": "82c5c389-2e7f-4e50-a7ca-574f73ebf34f",
+    "edits": [],
+    "mappings": [
+      {
+        "fromBlockID": "first",
+        "toBlockID": "first",
+        "fromStartUTF16": 0,
+        "fromEndUTF16": 5,
+        "offsetDeltaUTF16": 0,
+        "targetText": "First"
+      },
+      {
+        "fromBlockID": "first",
+        "toBlockID": "b1e77a74-4a60-4673-b7cc-732c68e531c2",
+        "fromStartUTF16": 5,
+        "fromEndUTF16": 11,
+        "offsetDeltaUTF16": -5,
+        "targetText": "Second"
+      }
+    ]
+  },
+  {
+    "markdown": "First\n\nSecond\n\n",
+    "revision": 12,
+    "composing": false,
+    "historyID": "25945191-e117-4e09-873f-cba6839ab74d",
+    "edits": [],
+    "mappings": []
+  },
+  {
+    "markdown": "First\n\nSecond\n\n",
+    "revision": 13,
+    "composing": false,
+    "historyID": "ce526d79-7f8d-4146-975d-946b6b043038",
+    "edits": [
+      {
+        "blockID": "study-child",
+        "startUTF16": 10,
+        "endUTF16": 10,
+        "insertedText": " ",
+        "oldText": "Study bold"
+      }
+    ],
+    "mappings": []
+  },
+  {
+    "markdown": "First\n\nSecond\n\n",
+    "revision": 14,
+    "composing": false,
+    "historyID": "c343a911-5609-4096-85cb-ee298f5a7cd6",
+    "edits": [
+      {
+        "blockID": "study-child",
+        "startUTF16": 11,
+        "endUTF16": 11,
+        "insertedText": "e",
+        "oldText": "Study bold "
+      }
+    ],
+    "mappings": []
+  },
+  {
+    "markdown": "First\n\nSecond\n\n",
+    "revision": 15,
+    "composing": false,
+    "historyID": "0ccc801c-8c08-4d0c-bc4d-d12a3d90a32d",
+    "edits": [
+      {
+        "blockID": "study-child",
+        "startUTF16": 12,
+        "endUTF16": 12,
+        "insertedText": "d",
+        "oldText": "Study bold e"
+      }
+    ],
+    "mappings": []
+  },
+  {
+    "markdown": "First\n\nSecond\n\n",
+    "revision": 16,
+    "composing": false,
+    "historyID": "b16d1e6b-29a3-4f97-89f0-7b2480b17425",
+    "edits": [
+      {
+        "blockID": "study-child",
+        "startUTF16": 13,
+        "endUTF16": 13,
+        "insertedText": "i",
+        "oldText": "Study bold ed"
+      }
+    ],
+    "mappings": []
+  },
+  {
+    "markdown": "First\n\nSecond\n\n",
+    "revision": 17,
+    "composing": false,
+    "historyID": "f3fadf68-12ec-437e-a422-a9c379e63024",
+    "edits": [
+      {
+        "blockID": "study-child",
+        "startUTF16": 14,
+        "endUTF16": 14,
+        "insertedText": "t",
+        "oldText": "Study bold edi"
+      }
+    ],
+    "mappings": []
+  },
+  {
+    "markdown": "First\n\nSecond\n\n",
+    "revision": 18,
+    "composing": false,
+    "historyID": "5a5a7942-71e9-41fd-be24-12dbcb49b75f",
+    "edits": [
+      {
+        "blockID": "study-child",
+        "startUTF16": 15,
+        "endUTF16": 15,
+        "insertedText": "e",
+        "oldText": "Study bold edit"
+      }
+    ],
+    "mappings": []
+  },
+  {
+    "markdown": "First\n\nSecond\n\n",
+    "revision": 19,
+    "composing": false,
+    "historyID": "33394795-ca9b-4989-95d0-0c59a18fc309",
+    "edits": [
+      {
+        "blockID": "study-child",
+        "startUTF16": 16,
+        "endUTF16": 16,
+        "insertedText": "d",
+        "oldText": "Study bold edite"
+      }
+    ],
+    "mappings": []
+  },
+  {
+    "markdown": "First\n\nSecond\n\n",
+    "revision": 20,
+    "composing": false,
+    "historyID": "33394795-ca9b-4989-95d0-0c59a18fc309",
+    "edits": [],
+    "mappings": []
+  },
+  {
+    "markdown": "First\n\nSecond\n\n",
+    "revision": 21,
+    "composing": false,
+    "historyID": "33394795-ca9b-4989-95d0-0c59a18fc309",
+    "edits": [],
+    "mappings": []
+  },
+  {
+    "markdown": "First\n\nSecond\n\n",
+    "revision": 22,
+    "composing": false,
+    "historyID": "0a7fa70b-5410-49e0-b277-972f1dd3e013",
+    "edits": [],
+    "mappings": []
+  },
+  {
+    "markdown": "First\n\nSecond\n\n",
+    "revision": 23,
+    "composing": false,
+    "historyID": "82c5c389-2e7f-4e50-a7ca-574f73ebf34f",
+    "edits": [],
+    "mappings": []
+  },
+  {
+    "markdown": "First\n\nSecond\n\n",
+    "revision": 24,
+    "composing": false,
+    "historyID": "0a7fa70b-5410-49e0-b277-972f1dd3e013",
+    "edits": [],
+    "mappings": []
+  },
+  {
+    "markdown": "First\n\nSecond\n\n\n새",
+    "revision": 25,
+    "composing": false,
+    "historyID": "e12a9d83-3482-49d6-b386-20948ff50798",
+    "edits": [],
+    "mappings": []
+  },
+  {
+    "markdown": "First\n\nSecond\n\n\n새 ",
+    "revision": 26,
+    "composing": false,
+    "historyID": "5f8c8902-48ec-40c2-b75b-e4a1a178f364",
+    "edits": [
+      {
+        "blockID": "63d20656-79e4-4596-9edf-1393b918bb3b",
+        "startUTF16": 1,
+        "endUTF16": 1,
+        "insertedText": " ",
+        "oldText": "새"
+      }
+    ],
+    "mappings": []
+  },
+  {
+    "markdown": "First\n\nSecond\n\n\n새 문",
+    "revision": 27,
+    "composing": false,
+    "historyID": "8decb963-e6c7-4279-9fb0-b8986e8fcdd4",
+    "edits": [
+      {
+        "blockID": "63d20656-79e4-4596-9edf-1393b918bb3b",
+        "startUTF16": 2,
+        "endUTF16": 2,
+        "insertedText": "문",
+        "oldText": "새 "
+      }
+    ],
+    "mappings": []
+  },
+  {
+    "markdown": "First\n\nSecond\n\n\n새 문단",
+    "revision": 28,
+    "composing": false,
+    "historyID": "7affb737-3bd2-4ce1-98c4-5a70eaa4917e",
+    "edits": [
+      {
+        "blockID": "63d20656-79e4-4596-9edf-1393b918bb3b",
+        "startUTF16": 3,
+        "endUTF16": 3,
+        "insertedText": "단",
+        "oldText": "새 문"
+      }
+    ],
+    "mappings": []
+  },
+  {
+    "markdown": "First\n\nSecond\n\n\n새 문단",
+    "revision": 29,
+    "composing": false,
+    "historyID": "7affb737-3bd2-4ce1-98c4-5a70eaa4917e",
+    "edits": [],
+    "mappings": []
+  },
+  {
+    "markdown": "Main",
+    "revision": 30,
+    "composing": false,
+    "historyID": "544d4dea-78d1-4f01-a845-09c9805f6b36",
+    "edits": [],
+    "mappings": []
+  },
+  {
+    "markdown": "Main",
+    "revision": 31,
+    "composing": false,
+    "historyID": "85f6122a-7305-4dde-a392-3d7f7ae89e56",
+    "edits": [
+      {
+        "blockID": "255c5f98-59ee-49d9-9961-e6c74b35c806",
+        "startUTF16": 0,
+        "endUTF16": 0,
+        "insertedText": "보",
+        "oldText": ""
+      }
+    ],
+    "mappings": []
+  },
+  {
+    "markdown": "Main",
+    "revision": 32,
+    "composing": false,
+    "historyID": "07a5c160-a06d-400b-9168-51bea21a4466",
+    "edits": [
+      {
+        "blockID": "255c5f98-59ee-49d9-9961-e6c74b35c806",
+        "startUTF16": 1,
+        "endUTF16": 1,
+        "insertedText": "충",
+        "oldText": "보"
+      }
+    ],
+    "mappings": []
+  },
+  {
+    "markdown": "Main",
+    "revision": 33,
+    "composing": false,
+    "historyID": "9da33d5e-b993-446c-9e33-8af16b5ef5bb",
+    "edits": [
+      {
+        "blockID": "255c5f98-59ee-49d9-9961-e6c74b35c806",
+        "startUTF16": 2,
+        "endUTF16": 2,
+        "insertedText": " ",
+        "oldText": "보충"
+      }
+    ],
+    "mappings": []
+  },
+  {
+    "markdown": "Main",
+    "revision": 34,
+    "composing": false,
+    "historyID": "af88014c-23ff-444f-81db-7d5ab3e58cdf",
+    "edits": [
+      {
+        "blockID": "255c5f98-59ee-49d9-9961-e6c74b35c806",
+        "startUTF16": 3,
+        "endUTF16": 3,
+        "insertedText": "설",
+        "oldText": "보충 "
+      }
+    ],
+    "mappings": []
+  },
+  {
+    "markdown": "Main",
+    "revision": 35,
+    "composing": false,
+    "historyID": "908e28de-5a81-4462-9fb2-9ebb78f190f9",
+    "edits": [
+      {
+        "blockID": "255c5f98-59ee-49d9-9961-e6c74b35c806",
+        "startUTF16": 4,
+        "endUTF16": 4,
+        "insertedText": "명",
+        "oldText": "보충 설"
+      }
+    ],
+    "mappings": []
+  },
+  {
+    "markdown": "Main",
+    "revision": 36,
+    "composing": false,
+    "historyID": "908e28de-5a81-4462-9fb2-9ebb78f190f9",
+    "edits": [],
+    "mappings": []
+  },
+  {
+    "markdown": "*Original* ",
+    "revision": 37,
+    "composing": false,
+    "historyID": "145378fa-9870-4256-b795-bcf23d56295c",
+    "edits": [
+      {
+        "blockID": "20708a54-5242-4817-8c17-77a8acd88913",
+        "startUTF16": 8,
+        "endUTF16": 8,
+        "insertedText": " ",
+        "oldText": "Original"
+      }
+    ],
+    "mappings": []
+  },
+  {
+    "markdown": "*Original a*",
+    "revision": 38,
+    "composing": false,
+    "historyID": "a1352a7e-b099-4c53-a8c3-37fa70f1a95d",
+    "edits": [
+      {
+        "blockID": "20708a54-5242-4817-8c17-77a8acd88913",
+        "startUTF16": 9,
+        "endUTF16": 9,
+        "insertedText": "a",
+        "oldText": "Original "
+      }
+    ],
+    "mappings": []
+  },
+  {
+    "markdown": "*Original ap*",
+    "revision": 39,
+    "composing": false,
+    "historyID": "c838b2bd-b11b-4a1e-80e9-f5ad02351506",
+    "edits": [
+      {
+        "blockID": "20708a54-5242-4817-8c17-77a8acd88913",
+        "startUTF16": 10,
+        "endUTF16": 10,
+        "insertedText": "p",
+        "oldText": "Original a"
+      }
+    ],
+    "mappings": []
+  },
+  {
+    "markdown": "*Original app*",
+    "revision": 40,
+    "composing": false,
+    "historyID": "e6276e57-a0f7-4e52-9b11-29b13cc6c5bf",
+    "edits": [
+      {
+        "blockID": "20708a54-5242-4817-8c17-77a8acd88913",
+        "startUTF16": 11,
+        "endUTF16": 11,
+        "insertedText": "p",
+        "oldText": "Original ap"
+      }
+    ],
+    "mappings": []
+  },
+  {
+    "markdown": "*Original appe*",
+    "revision": 41,
+    "composing": false,
+    "historyID": "6137b5fa-46c6-4fbb-8941-f0424e31bb24",
+    "edits": [
+      {
+        "blockID": "20708a54-5242-4817-8c17-77a8acd88913",
+        "startUTF16": 12,
+        "endUTF16": 12,
+        "insertedText": "e",
+        "oldText": "Original app"
+      }
+    ],
+    "mappings": []
+  },
+  {
+    "markdown": "*Original appen*",
+    "revision": 42,
+    "composing": false,
+    "historyID": "1c4c05d8-717e-450d-91f7-bae80fbc6c6d",
+    "edits": [
+      {
+        "blockID": "20708a54-5242-4817-8c17-77a8acd88913",
+        "startUTF16": 13,
+        "endUTF16": 13,
+        "insertedText": "n",
+        "oldText": "Original appe"
+      }
+    ],
+    "mappings": []
+  },
+  {
+    "markdown": "*Original append*",
+    "revision": 43,
+    "composing": false,
+    "historyID": "49f6c6ec-96a5-4c56-aeab-810855ca65a2",
+    "edits": [
+      {
+        "blockID": "20708a54-5242-4817-8c17-77a8acd88913",
+        "startUTF16": 14,
+        "endUTF16": 14,
+        "insertedText": "d",
+        "oldText": "Original appen"
+      }
+    ],
+    "mappings": []
+  },
+  {
+    "markdown": "*Original appende*",
+    "revision": 44,
+    "composing": false,
+    "historyID": "0ca5c433-3ba8-4683-808b-8654f517b716",
+    "edits": [
+      {
+        "blockID": "20708a54-5242-4817-8c17-77a8acd88913",
+        "startUTF16": 15,
+        "endUTF16": 15,
+        "insertedText": "e",
+        "oldText": "Original append"
+      }
+    ],
+    "mappings": []
+  },
+  {
+    "markdown": "*Original appended*",
+    "revision": 45,
+    "composing": false,
+    "historyID": "c71fd381-a9e6-43fb-8ecb-4f31be1a352a",
+    "edits": [
+      {
+        "blockID": "20708a54-5242-4817-8c17-77a8acd88913",
+        "startUTF16": 16,
+        "endUTF16": 16,
+        "insertedText": "d",
+        "oldText": "Original appende"
+      }
+    ],
+    "mappings": []
+  },
+  {
+    "markdown": "_Original_",
+    "revision": 46,
+    "composing": false,
+    "historyID": "ecbc6a11-9a87-4e22-87cb-1a04118fe390",
+    "edits": [
+      {
+        "blockID": "20708a54-5242-4817-8c17-77a8acd88913",
+        "startUTF16": 8,
+        "endUTF16": 17,
+        "insertedText": "",
+        "oldText": "Original appended"
+      }
+    ],
+    "mappings": []
+  },
+  {
+    "markdown": "_Original_",
+    "revision": 47,
+    "composing": false,
+    "historyID": "ecbc6a11-9a87-4e22-87cb-1a04118fe390",
+    "edits": [],
+    "mappings": []
+  },
+  {
+    "markdown": "| A |\n| - |\n| Changed |",
+    "revision": 48,
+    "composing": false,
+    "historyID": "8ba4f2f2-563b-49a9-b248-9804b4ad381b",
+    "edits": [],
+    "mappings": []
+  },
+  {
+    "markdown": "| A |\n| - |\n| Changed |",
+    "revision": 49,
+    "composing": false,
+    "historyID": "8ba4f2f2-563b-49a9-b248-9804b4ad381b",
+    "edits": [
+      {
+        "blockID": "79904eb1-4c81-4a61-b928-3aecc5ee15a9",
+        "startUTF16": 9,
+        "endUTF16": 10,
+        "insertedText": "Changed",
+        "oldText": "\n\n\nA\n\n\n\n\nB\n\n\n"
+      }
+    ],
+    "mappings": []
+  },
+  {
+    "markdown": "Xtarget text",
+    "revision": 50,
+    "composing": false,
+    "historyID": "7d5513dd-271d-400b-850c-945ffe200b7f",
+    "edits": [
+      {
+        "blockID": "range",
+        "startUTF16": 0,
+        "endUTF16": 0,
+        "insertedText": "X",
+        "oldText": "target text"
+      }
+    ],
+    "mappings": []
+  },
+  {
+    "markdown": "XtaYrget text",
+    "revision": 51,
+    "composing": false,
+    "historyID": "293b1e2e-59da-44a5-a757-a0277442d62d",
+    "edits": [
+      {
+        "blockID": "range",
+        "startUTF16": 3,
+        "endUTF16": 3,
+        "insertedText": "Y",
+        "oldText": "Xtarget text"
+      }
+    ],
+    "mappings": []
+  },
+  {
+    "markdown": "Xtarget text",
+    "revision": 52,
+    "composing": false,
+    "historyID": "7d5513dd-271d-400b-850c-945ffe200b7f",
+    "edits": [
+      {
+        "blockID": "range",
+        "startUTF16": 3,
+        "endUTF16": 4,
+        "insertedText": "",
+        "oldText": "XtaYrget text"
+      }
+    ],
+    "mappings": []
+  },
+  {
+    "markdown": "target text",
+    "revision": 53,
+    "composing": false,
+    "historyID": "81d20cd2-1fce-4160-a44a-a8f89ecb3646",
+    "edits": [
+      {
+        "blockID": "range",
+        "startUTF16": 0,
+        "endUTF16": 1,
+        "insertedText": "",
+        "oldText": "Xtarget text"
+      }
+    ],
+    "mappings": []
+  },
+  {
+    "markdown": "target text",
+    "revision": 54,
+    "composing": false,
+    "historyID": "81d20cd2-1fce-4160-a44a-a8f89ecb3646",
+    "edits": [],
+    "mappings": []
+  },
+  {
+    "markdown": "First\n\nSecond",
+    "revision": 55,
+    "composing": false,
+    "historyID": "b93f1fb0-7aff-4479-bd54-a39e99dbd93e",
+    "edits": [],
+    "mappings": []
+  },
+  {
+    "markdown": "FirstSecond\n\n",
+    "revision": 56,
+    "composing": false,
+    "historyID": "90260993-8fd9-4330-b145-7683dfc8107f",
+    "edits": [
+      {
+        "blockID": "first",
+        "startUTF16": 5,
+        "endUTF16": 5,
+        "insertedText": "Second",
+        "oldText": "First"
+      }
+    ],
+    "mappings": [
+      {
+        "fromBlockID": "second",
+        "toBlockID": "first",
+        "fromStartUTF16": 0,
+        "fromEndUTF16": 6,
+        "offsetDeltaUTF16": 5,
+        "targetText": "FirstSecond"
+      }
+    ]
+  },
+  {
+    "markdown": "FirstSecond\n\n",
+    "revision": 57,
+    "composing": false,
+    "historyID": "90260993-8fd9-4330-b145-7683dfc8107f",
+    "edits": [],
+    "mappings": []
+  },
+  {
+    "markdown": "First\n\nSecond",
+    "revision": 58,
+    "composing": false,
+    "historyID": "b93f1fb0-7aff-4479-bd54-a39e99dbd93e",
+    "edits": [
+      {
+        "blockID": "first",
+        "startUTF16": 5,
+        "endUTF16": 11,
+        "insertedText": "",
+        "oldText": "FirstSecond"
+      }
+    ],
+    "mappings": []
+  },
+  {
+    "markdown": "",
+    "revision": 59,
+    "composing": false,
+    "historyID": "746478b9-3555-47d6-8c2f-dc43e4b28064",
+    "edits": [
+      {
+        "blockID": "delete-target",
+        "startUTF16": 0,
+        "endUTF16": 6,
+        "insertedText": "",
+        "oldText": "Target"
+      }
+    ],
+    "mappings": []
+  },
+  {
+    "markdown": "Target",
+    "revision": 60,
+    "composing": false,
+    "historyID": "e40789b2-dd2a-41d4-bf71-72b6cb58241c",
+    "edits": [
+      {
+        "blockID": "delete-target",
+        "startUTF16": 0,
+        "endUTF16": 0,
+        "insertedText": "Target",
+        "oldText": ""
+      }
+    ],
+    "mappings": []
+  },
+  {
+    "markdown": "Target",
+    "revision": 61,
+    "composing": false,
+    "historyID": "e40789b2-dd2a-41d4-bf71-72b6cb58241c",
+    "edits": [],
+    "mappings": []
+  },
+  {
+    "markdown": "Target",
+    "revision": 62,
+    "composing": false,
+    "historyID": "e40789b2-dd2a-41d4-bf71-72b6cb58241c",
+    "edits": [],
+    "mappings": []
+  }
+]

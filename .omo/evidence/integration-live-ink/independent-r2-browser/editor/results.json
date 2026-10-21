@@ -1,0 +1,134 @@
+[
+  {
+    "name": "real rich DOM keyboard edit",
+    "passed": true
+  },
+  {
+    "name": "frontmatter CRLF references and table remain exact",
+    "passed": true
+  },
+  {
+    "name": "text edit DTO includes old UTF16 text",
+    "passed": true
+  },
+  {
+    "name": "rich undo restores source",
+    "passed": true
+  },
+  {
+    "name": "rich redo reapplies source",
+    "passed": true
+  },
+  {
+    "name": "composition blocks flush and emits no save",
+    "passed": true
+  },
+  {
+    "name": "unsupported table uses deliberate source fallback",
+    "passed": true
+  },
+  {
+    "name": "source fallback retains ink target identity and text",
+    "passed": true
+  },
+  {
+    "name": "cancel fallback preserves source",
+    "passed": true
+  },
+  {
+    "name": "Backspace joins adjacent rendered paragraphs",
+    "passed": true
+  },
+  {
+    "name": "join emits right-to-left anchor mapping",
+    "passed": true
+  },
+  {
+    "name": "split emits segment anchor mapping",
+    "passed": true
+  },
+  {
+    "name": "split retains first stable identity",
+    "passed": true
+  },
+  {
+    "name": "supplement remains rendered and keeps child identity after editing",
+    "passed": true
+  },
+  {
+    "name": "study resize reserves actual height",
+    "passed": true
+  },
+  {
+    "name": "study remove changes layout",
+    "passed": true
+  },
+  {
+    "name": "study undo restores content and identity",
+    "passed": true
+  },
+  {
+    "name": "new paragraph supports real keyboard input",
+    "passed": true
+  },
+  {
+    "name": "external move uses unique identity instead of ordinal",
+    "passed": true
+  },
+  {
+    "name": "external duplicate refuses ambiguous identity",
+    "passed": true
+  },
+  {
+    "name": "new empty supplement accepts rich text",
+    "passed": true
+  },
+  {
+    "name": "every layout block decodes legacy required hash fields",
+    "passed": true
+  },
+  {
+    "name": "undo restores original noncanonical Markdown bytes",
+    "passed": true
+  },
+  {
+    "name": "explicit source apply preserves supported table extension",
+    "passed": true
+  },
+  {
+    "name": "insertion before target emits exact UTF16 map",
+    "passed": true
+  },
+  {
+    "name": "insertion inside target emits exact UTF16 map",
+    "passed": true
+  },
+  {
+    "name": "undo returns exact stable history identity",
+    "passed": true
+  },
+  {
+    "name": "Delete joins next ordinary paragraph",
+    "passed": true
+  },
+  {
+    "name": "keyboard undo restores merged paragraph identities",
+    "passed": true
+  },
+  {
+    "name": "complete target deletion emits an exact deletion map",
+    "passed": true
+  },
+  {
+    "name": "delete undo restores attachment history key and block identity",
+    "passed": true
+  },
+  {
+    "name": "source preview retains follow-text range geometry",
+    "passed": true
+  },
+  {
+    "name": "cancel source preview preserves target source",
+    "passed": true
+  }
+]

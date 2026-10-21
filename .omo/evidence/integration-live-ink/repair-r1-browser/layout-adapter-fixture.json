@@ -1,0 +1,36 @@
+[
+  {
+    "blockID": "adapter-paragraph",
+    "blockHash": "2713f785a33764c7",
+    "blockSeq": 0,
+    "sourceLineStart": 0,
+    "sourceLineEnd": 1,
+    "text": "Hello world",
+    "rangeText": "Hello world",
+    "rangeStartUTF16": 0,
+    "rangeEndUTF16": 11,
+    "rangeSupported": true,
+    "studyID": null,
+    "x": 90,
+    "y": 100.59375,
+    "width": 900,
+    "height": 31.5
+  },
+  {
+    "blockID": "adapter-tail",
+    "blockHash": "3da57fb09094b03",
+    "blockSeq": 0,
+    "sourceLineStart": 2,
+    "sourceLineEnd": 3,
+    "text": "Tail",
+    "rangeText": "Tail",
+    "rangeStartUTF16": 0,
+    "rangeEndUTF16": 4,
+    "rangeSupported": true,
+    "studyID": null,
+    "x": 90,
+    "y": 144.6875,
+    "width": 900,
+    "height": 31.5
+  }
+]

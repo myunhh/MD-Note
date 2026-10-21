@@ -1,0 +1,10 @@
+9e03057263b6c6024652019b94722ed681885745
+COMMAND node scripts/check-rich-editor.mjs
+Rich editor browser checks passed: 33/33. Evidence: C:\Users\picom\orca\MD-Note\.omo\evidence\integration-live-ink\editor
+EXIT 0
+COMMAND node scripts/check-annotation-layout.mjs
+Annotation layout real DOM checks passed: 27/27. Evidence: C:\Users\picom\orca\MD-Note\.omo\evidence\integration-live-ink\layout
+EXIT 0
+COMMAND node scripts/check-document-search.mjs
+Document search real DOM checks passed: 28/28. Evidence: C:\Users\picom\orca\MD-Note\.omo\evidence\integration-live-ink\search
+EXIT 0

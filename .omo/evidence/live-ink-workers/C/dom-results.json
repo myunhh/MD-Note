@@ -1,0 +1,116 @@
+[
+  {
+    "name": "legacy identity retained",
+    "passed": true
+  },
+  {
+    "name": "multiline range reflows",
+    "passed": true,
+    "observed": {
+      "wide": 3,
+      "narrow": 5
+    }
+  },
+  {
+    "name": "text scale reflows fragments",
+    "passed": true,
+    "observed": 8
+  },
+  {
+    "name": "underline and highlight map every line",
+    "passed": true
+  },
+  {
+    "name": "blank insertion reserves height",
+    "passed": true,
+    "observed": 176
+  },
+  {
+    "name": "blank is ink target",
+    "passed": true
+  },
+  {
+    "name": "repeated placement has zero accumulated drift",
+    "passed": true
+  },
+  {
+    "name": "rigid shape and pressure preserved",
+    "passed": true
+  },
+  {
+    "name": "resize pushes downstream by delta",
+    "passed": true
+  },
+  {
+    "name": "removal restores downstream geometry",
+    "passed": true
+  },
+  {
+    "name": "supplement blocks identifiable across reopen",
+    "passed": true
+  },
+  {
+    "name": "renderer receives persisted supplement block IDs",
+    "passed": true
+  },
+  {
+    "name": "move follows selected boundary",
+    "passed": true
+  },
+  {
+    "name": "null boundary inserts at start",
+    "passed": true
+  },
+  {
+    "name": "UTF16 splits inside emoji rejected",
+    "passed": true
+  },
+  {
+    "name": "combining grapheme splits rejected",
+    "passed": true
+  },
+  {
+    "name": "whole emoji grapheme accepted",
+    "passed": true
+  },
+  {
+    "name": "unique edited quote reattaches",
+    "passed": true
+  },
+  {
+    "name": "ambiguous quote preserved detached",
+    "passed": true
+  },
+  {
+    "name": "deleted quote preserved detached",
+    "passed": true
+  },
+  {
+    "name": "rigid range deletion detaches without losing originals",
+    "passed": true
+  },
+  {
+    "name": "math and image retain rigid targets",
+    "passed": true
+  },
+  {
+    "name": "math range refuses glyph/source mismatch",
+    "passed": true
+  },
+  {
+    "name": "duplicate block IDs ambiguous",
+    "passed": true
+  },
+  {
+    "name": "deleted rigid target preserves original",
+    "passed": true
+  },
+  {
+    "name": "missing insertion boundary preserved visibly",
+    "passed": true
+  },
+  {
+    "name": "invalid insertions do not mutate live content",
+    "passed": true
+  }
+]

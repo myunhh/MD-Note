@@ -1,0 +1,17 @@
+node:internal/modules/run_main:107
+    triggerUncaughtException(
+    ^
+
+AssertionError [ERR_ASSERTION]: source fallback retains ink target identity and text
+    at check (file:///C:/Users/picom/orca/MD-Note/scripts/check-rich-editor.mjs:15:10)
+    at file:///C:/Users/picom/orca/MD-Note/scripts/check-rich-editor.mjs:67:9
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5) {
+  generatedMessage: false,
+  code: 'ERR_ASSERTION',
+  actual: false,
+  expected: true,
+  operator: '==',
+  diff: 'simple'
+}
+
+Node.js v24.19.0

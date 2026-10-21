@@ -1,0 +1,37 @@
+**********************
+PowerShell 기록 시작
+시작 시간: 20261020192947
+사용자 이름: MYUNHH\picom
+실행 사용자: MYUNHH\picom
+구성 이름: 
+컴퓨터: MYUNHH (Microsoft Windows NT 10.0.26200.0)
+호스트 애플리케이션: C:\Program Files\WindowsApps\Microsoft.PowerShell_7.6.6.0_x64__8wekyb3d8bbwe\pwsh.dll -Command try { [Console]::OutputEncoding=[System.Text.Encoding]::UTF8 } catch {}
+$env:MDNOTE_OMOWRIGHT_LOADER='C:/Users/picom/.codex/plugins/cache/sisyphuslabs/omo/5.1.38/skills/browser/scripts/omowright.mjs'; $env:MDNOTE_CHROME='C:/Program Files/Google/Chrome/Application/chrome.exe'; Start-Transcript -Path .omo/evidence/annotation-layout/verification-output.txt -Force; node scripts/check-annotation-layout.mjs; $browserExit=$LASTEXITCODE; node --check MDNote/Resources/WebAssets/app/annotation-layout.js; $syntaxExit=$LASTEXITCODE; git diff --check; $diffExit=$LASTEXITCODE; git rev-parse HEAD; Get-Item .omo/evidence/annotation-layout/dom-results.json,.omo/evidence/annotation-layout/narrow-highlight.png; Write-Output "Verification verdict: browserExit=$browserExit syntaxExit=$syntaxExit diffExit=$diffExit"; Stop-Transcript; if ($browserExit -ne 0 -or $syntaxExit -ne 0 -or $diffExit -ne 0) { exit 1 }
+프로세스 ID: 42064
+PSVersion: 7.6.6
+PSEdition: Core
+GitCommitId: 7.6.6
+OS: Microsoft Windows 10.0.26200
+Platform: Win32NT
+PSCompatibleVersions: 1.0, 2.0, 3.0, 4.0, 5.0, 5.1, 6.0, 7.0
+PSRemotingProtocolVersion: 2.4
+SerializationVersion: 1.1.0.1
+WSManStackVersion: 3.0
+**********************
+대화 내용 기록이 시작되었습니다. 출력 파일은 .omo/evidence/annotation-layout/verification-output.txt입니다.
+
+
+
+
+
+    디렉터리: C:\Users\picom\orca\MD-Note\.omo\teams\team-e43dac36\worktrees\C\.omo\evidence\annotation-layout
+
+Mode                 LastWriteTime         Length Name
+----                 -------------         ------ ----
+-a---        2026-10-20  오후 7:29           2232 dom-results.json
+-a---        2026-10-20  오후 7:29          24124 narrow-highlight.png
+Verification verdict: browserExit=0 syntaxExit=0 diffExit=0
+**********************
+PowerShell 기록 끝
+종료 시간: 20261020192950
+**********************

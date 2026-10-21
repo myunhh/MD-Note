@@ -1,0 +1,17 @@
+node:internal/modules/run_main:107
+    triggerUncaughtException(
+    ^
+
+AssertionError [ERR_ASSERTION]: shortcut link requires source-preserving editor
+    at check (file:///C:/Users/picom/orca/MD-Note/scripts/check-editor-boundaries.mjs:16:10)
+    at file:///C:/Users/picom/orca/MD-Note/scripts/check-editor-boundaries.mjs:44:5
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5) {
+  generatedMessage: false,
+  code: 'ERR_ASSERTION',
+  actual: false,
+  expected: true,
+  operator: '==',
+  diff: 'simple'
+}
+
+Node.js v24.19.0

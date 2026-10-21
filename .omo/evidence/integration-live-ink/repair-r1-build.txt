@@ -1,0 +1,12 @@
+
+added 24 packages, and audited 25 packages in 889ms
+
+3 packages are looking for funding
+  run `npm fund` for details
+
+found 0 vulnerabilities
+
+> build
+> node build.mjs
+
+Rebuild before=01B63C4D14FB324A0BD02E210ADEEB95EB941B389F8ABFFF40560C8E5D45D18D after=01B63C4D14FB324A0BD02E210ADEEB95EB941B389F8ABFFF40560C8E5D45D18D equal=True

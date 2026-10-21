@@ -1,0 +1,17 @@
+REPAIR R1 FINAL LOCAL VERIFICATION
+COMMAND git rev-parse HEAD
+310933ac01b671ce98e803eac1181e355a6d1a62
+COMMAND git status --short
+?? .omo/evidence/baseline-live-ink-search/
+?? .omo/evidence/integration-live-ink/
+?? .omo/evidence/live-ink-workers/
+?? .omo/evidence/mdnote-live-ink-code-review.md
+?? .omo/evidence/root-live-ink/
+?? .omo/teams/
+COMMAND git diff --exit-code: 0
+COMMAND git diff --staged --exit-code: 0
+COMMAND inspect repair-r1-browser/results.json : total=25 failed=0
+COMMAND inspect repair-r1-editor/results.json : total=33 failed=0
+COMMAND inspect repair-r1-layout/dom-results.json : total=27 failed=0
+COMMAND inspect repair-r1-search/dom-results.json : total=28 failed=0
+VERDICT: H1-H3/M1 repairs committed, Windows browser/Node checks pass, source tree clean. Native XCTest and Swift/Xcode execution UNRUN; fresh independent review pending. Matrix: .omo/evidence/integration-live-ink/repair-r1.md

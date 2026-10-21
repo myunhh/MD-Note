@@ -1,0 +1,84 @@
+9e03057263b6c6024652019b94722ed681885745
+COMMAND node MDNoteCore/Tests/parity/hash_parity.mjs
+hash parity OK: 8/8 cases match Swift golden values.
+EXIT 0
+COMMAND node MDNoteCore/Tests/parity/anchor_fixture_check.mjs
+PASS: 4 shared Unicode fixtures, 31 UTF16 boundary assertions using Intl.Segmenter.
+Swift implementation is checked by StableAnnotationTests.testSharedUTF16Fixtures on macOS; this invocation does not execute Swift.
+EXIT 0
+COMMAND node scripts/check-localization.mjs
+Localization checks passed: 170 bilingual keys, 173 Swift lookups, both samples and resource configuration.
+EXIT 0
+COMMAND node scripts/check-archive-contract.mjs
+PASS: export path-unescape fixture, dependency pin, and archive error localization contracts.
+LIMITATION: JavaScript regex compatibility checks do not execute Swift, Foundation, ZIPFoundation, or UIKit. Native XCTest remains required.
+EXIT 0
+COMMAND node scripts/check-archive-renderer.mjs
+PASS: 18 fixtures execute the real bridge.imageSources and bundled markdown-it parser, including deeply nested destinations/alt text, references, code, raw HTML and front matter.
+PASS: composed source fragments preserve independent fence/reference scope for supplement assets.
+LIMITATION: Native Swift/WebKit transport and ZIP roundtrip require Xcode execution.
+EXIT 0
+COMMAND node scripts/check-native-ink-contract.mjs
+PASS static contract: save comparison is inside coordinated accessor
+PASS static contract: read errors cannot become document text
+PASS static contract: self-save baseline advances only after coordinated write
+PASS static contract: original ink and stable identities survive recapture
+PASS static contract: range projection is separate from original payload
+PASS static contract: Pencil-down checks guard loading, layout and replacement
+PASS static contract: native edit maps and undo attachments wired
+PASS static contract: study persistence and shared editor undo wired
+PASS static contract: archive includes supplement asset scan
+PASS static contract: future sidecar mutation guards remain
+PASS static contract: text input preserves existing canvas
+PASS static contract: native regression scenarios are present
+PASS static contract: incomplete load cannot schedule a sidecar save or export
+PASS static contract: ink behavior reflects an accepted nonempty selection
+PASS static contract: live range trust is limited to remeasurement and projection publication is guarded
+PASS 15 source contract checks. LIMITATION: no Swift/UIKit/PencilKit runtime execution; native XCTest and iPad acceptance are required.
+EXIT 0
+COMMAND node --check MDNote/Resources/WebAssets/app/bridge.js
+EXIT 0
+COMMAND node --check MDNote/Resources/WebAssets/app/annotation-layout.js
+EXIT 0
+COMMAND node --check editor/editor.js
+EXIT 0
+COMMAND node --check scripts/check-rich-editor.mjs
+EXIT 0
+COMMAND node --check scripts/check-native-ink-contract.mjs
+EXIT 0
+warning: in the working copy of 'MDNote/Resources/WebAssets/vendor/editor-LICENSES.txt', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'MDNote/Resources/WebAssets/vendor/editor.js', LF will be replaced by CRLF the next time Git touches it
+git diff --check EXIT 0
+ M MDNote/Resources/WebAssets/vendor/editor-LICENSES.txt
+ M MDNote/Resources/WebAssets/vendor/editor.js
+?? .omo/evidence/baseline-live-ink-search/
+?? .omo/evidence/integration-live-ink/
+?? .omo/evidence/root-live-ink/
+?? .omo/teams/
+9e03057263b6c6024652019b94722ed681885745 Document live editing and Mac iPad acceptance checks
+13eb04a3205457049695df604fe4a5d39f1f4e9e Fix live editor integration and preserve annotation targets
+607fe38677ed7358c9dccba217b7f64ea49c2b7a Merge native live editing and ink persistence
+b4559453c2f3e11b942ccac15056067f2345d606 Merge rendered Markdown editing
+94564b6de7a8be4842a031c1dab57113a76322b0 Merge annotation layout and study spaces
+c6b89654a725a21e155b96ba32c2e4d5c5a3b945 Merge stable annotation core
+FINAL LOCAL INTEGRATION VERIFICATION
+COMMAND git rev-parse HEAD
+9e03057263b6c6024652019b94722ed681885745
+COMMAND git status --short (after vendor normalization)
+?? .omo/evidence/baseline-live-ink-search/
+?? .omo/evidence/integration-live-ink/
+?? .omo/evidence/root-live-ink/
+?? .omo/reviews/
+?? .omo/teams/
+COMMAND git diff --exit-code; git diff --staged --exit-code
+tracked diff exit=0
+staged diff exit=0
+COMMAND evidence result inspection
+editor/results.json total=33 failed=0
+layout/dom-results.json total=27 failed=0
+search/dom-results.json total=28 failed=0
+COMMAND Get-Command swift,xcodebuild availability
+swift available=False
+xcodebuild available=False
+VERDICT: Executed Windows browser/Node checks pass. Product tree clean. Native Swift/Xcode/Pencil/ZIP/PDF runtime checks UNRUN; root independent review pending. Full matrix: .omo/evidence/integration-live-ink/report.md
+

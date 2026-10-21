@@ -1,0 +1,33 @@
+COMMAND node MDNoteCore/Tests/parity/hash_parity.mjs
+hash parity OK: 8/8 cases match Swift golden values.
+EXIT 0
+COMMAND node MDNoteCore/Tests/parity/anchor_fixture_check.mjs
+PASS: 4 shared Unicode fixtures, 31 UTF16 boundary assertions using Intl.Segmenter.
+Swift implementation is checked by StableAnnotationTests.testSharedUTF16Fixtures on macOS; this invocation does not execute Swift.
+EXIT 0
+COMMAND node scripts/check-localization.mjs
+Localization checks passed: 165 bilingual keys, 168 Swift lookups, both samples and resource configuration.
+EXIT 0
+COMMAND node scripts/check-archive-contract.mjs
+PASS: export path-unescape fixture, dependency pin, and archive error localization contracts.
+LIMITATION: JavaScript regex compatibility checks do not execute Swift, Foundation, ZIPFoundation, or UIKit. Native XCTest remains required.
+EXIT 0
+COMMAND node scripts/check-archive-renderer.mjs
+PASS: 18 fixtures execute the real bridge.imageSources and bundled markdown-it parser, including deeply nested destinations/alt text, references, code, raw HTML and front matter.
+LIMITATION: Native Swift/WebKit transport and ZIP roundtrip require Xcode execution.
+EXIT 0
+COMMAND node scripts/check-native-ink-contract.mjs
+PASS static contract: save comparison is inside coordinated accessor
+PASS static contract: read errors cannot become document text
+PASS static contract: self-save baseline advances only after coordinated write
+PASS static contract: original ink and stable identities survive recapture
+PASS static contract: range projection is separate from original payload
+PASS static contract: Pencil-down checks guard loading, layout and replacement
+PASS static contract: native edit maps and undo attachments wired
+PASS static contract: study persistence and shared editor undo wired
+PASS static contract: archive includes supplement asset scan
+PASS static contract: future sidecar mutation guards remain
+PASS static contract: text input preserves existing canvas
+PASS static contract: native regression scenarios are present
+PASS 12 source contract checks. LIMITATION: no Swift/UIKit/PencilKit runtime execution; native XCTest and iPad acceptance are required.
+EXIT 0

@@ -1,0 +1,54 @@
+{
+  "sha": "310933ac01b671ce98e803eac1181e355a6d1a62",
+  "checks": [
+    {
+      "name": "offline editor and geometry globals available",
+      "passed": true
+    },
+    {
+      "name": "blank insertion shifts existing target and is ink anchor",
+      "passed": true
+    },
+    {
+      "name": "insertion undo restores original target geometry",
+      "passed": true
+    },
+    {
+      "name": "actual keyboard edits preserve frontmatter and untouched CRLF source",
+      "passed": true
+    },
+    {
+      "name": "native edit payload has old text and stable target identity",
+      "passed": true
+    },
+    {
+      "name": "rendered selection resolves to target text anchor",
+      "passed": true
+    },
+    {
+      "name": "same text anchor projects into multiple current wrapped lines",
+      "passed": true
+    },
+    {
+      "name": "projection has no repeated-layout drift",
+      "passed": true
+    },
+    {
+      "name": "composed page restore retains supplement and stable child ID",
+      "passed": true
+    },
+    {
+      "name": "main Markdown stays separate from supplemental Markdown",
+      "passed": true
+    },
+    {
+      "name": "restored source search remains functional",
+      "passed": true
+    },
+    {
+      "name": "no browser runtime errors during combined smoke",
+      "passed": true
+    }
+  ],
+  "limitation": "Browser editor/events/layout only; native WebKit/PencilKit/disk persistence not executed."
+}

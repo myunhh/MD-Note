@@ -1,0 +1,102 @@
+[
+  {
+    "name": "actual JS layout emits stable identities for the native adapter fixture",
+    "passed": true
+  },
+  {
+    "name": "shortcut link requires source-preserving editor",
+    "passed": true
+  },
+  {
+    "name": "shortcut link Apply preserves exact source and reference definition",
+    "passed": true
+  },
+  {
+    "name": "shortcut link remains rendered after unrelated keyboard insertion",
+    "passed": true
+  },
+  {
+    "name": "shortcut image requires source-preserving editor",
+    "passed": true
+  },
+  {
+    "name": "shortcut image Apply preserves exact source and reference definition",
+    "passed": true
+  },
+  {
+    "name": "shortcut image remains rendered after unrelated keyboard insertion",
+    "passed": true
+  },
+  {
+    "name": "English softbreak still uses a rendered rich editor",
+    "passed": true
+  },
+  {
+    "name": "English softbreak entering editor preserves range coordinate text",
+    "passed": true
+  },
+  {
+    "name": "English softbreak emitted map is only the actual append, never a target deletion",
+    "passed": true
+  },
+  {
+    "name": "English softbreak untouched annotation still resolves at original UTF16 range",
+    "passed": true
+  },
+  {
+    "name": "English softbreak save preserves soft line breaks",
+    "passed": true
+  },
+  {
+    "name": "English softbreak undo restores exact original source",
+    "passed": true
+  },
+  {
+    "name": "Korean Unicode softbreak still uses a rendered rich editor",
+    "passed": true
+  },
+  {
+    "name": "Korean Unicode softbreak entering editor preserves range coordinate text",
+    "passed": true
+  },
+  {
+    "name": "Korean Unicode softbreak emitted map is only the actual append, never a target deletion",
+    "passed": true
+  },
+  {
+    "name": "Korean Unicode softbreak untouched annotation still resolves at original UTF16 range",
+    "passed": true
+  },
+  {
+    "name": "Korean Unicode softbreak save preserves soft line breaks",
+    "passed": true
+  },
+  {
+    "name": "Korean Unicode softbreak undo restores exact original source",
+    "passed": true
+  },
+  {
+    "name": "multiple softbreaks still uses a rendered rich editor",
+    "passed": true
+  },
+  {
+    "name": "multiple softbreaks entering editor preserves range coordinate text",
+    "passed": true
+  },
+  {
+    "name": "multiple softbreaks emitted map is only the actual append, never a target deletion",
+    "passed": true
+  },
+  {
+    "name": "multiple softbreaks untouched annotation still resolves at original UTF16 range",
+    "passed": true
+  },
+  {
+    "name": "multiple softbreaks save preserves soft line breaks",
+    "passed": true
+  },
+  {
+    "name": "multiple softbreaks undo restores exact original source",
+    "passed": true
+  }
+]

@@ -1,0 +1,2 @@
+PASS: 18 fixtures execute the real bridge.imageSources and bundled markdown-it parser, including deeply nested destinations/alt text, references, code, raw HTML and front matter.
+LIMITATION: Native Swift/WebKit transport and ZIP roundtrip require Xcode execution.

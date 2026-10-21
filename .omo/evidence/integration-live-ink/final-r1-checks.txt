@@ -1,0 +1,52 @@
+310933ac01b671ce98e803eac1181e355a6d1a62
+COMMAND node MDNoteCore/Tests/parity/hash_parity.mjs
+hash parity OK: 8/8 cases match Swift golden values.
+EXIT 0
+COMMAND node MDNoteCore/Tests/parity/anchor_fixture_check.mjs
+PASS: 4 shared Unicode fixtures, 31 UTF16 boundary assertions using Intl.Segmenter.
+Swift implementation is checked by StableAnnotationTests.testSharedUTF16Fixtures on macOS; this invocation does not execute Swift.
+EXIT 0
+COMMAND node scripts/check-localization.mjs
+Localization checks passed: 170 bilingual keys, 173 Swift lookups, both samples and resource configuration.
+EXIT 0
+COMMAND node scripts/check-archive-contract.mjs
+PASS: export path-unescape fixture, dependency pin, and archive error localization contracts.
+LIMITATION: JavaScript regex compatibility checks do not execute Swift, Foundation, ZIPFoundation, or UIKit. Native XCTest remains required.
+EXIT 0
+COMMAND node scripts/check-archive-renderer.mjs
+PASS: 18 fixtures execute the real bridge.imageSources and bundled markdown-it parser, including deeply nested destinations/alt text, references, code, raw HTML and front matter.
+PASS: composed source fragments preserve independent fence/reference scope for supplement assets.
+LIMITATION: Native Swift/WebKit transport and ZIP roundtrip require Xcode execution.
+EXIT 0
+COMMAND node scripts/check-native-ink-contract.mjs
+PASS static contract: save comparison is inside coordinated accessor
+PASS static contract: read errors cannot become document text
+PASS static contract: self-save baseline advances only after coordinated write
+PASS static contract: range projection is separate from original payload
+PASS static contract: Pencil-down checks guard loading, layout and replacement
+PASS static contract: archive includes supplement asset scan
+PASS static contract: future sidecar mutation guards remain
+PASS static contract: incomplete load cannot schedule a sidecar save or export
+PASS static contract: ink behavior reflects an accepted nonempty selection
+PASS static contract: live range trust is limited to remeasurement and projection publication is guarded
+PASS 10 source boundary checks. These checks inspect ordering/guards only, not working behavior. Geometry decoding and its ink consumer are covered by native XCTest, which requires Xcode and is not executed by this script.
+EXIT 0
+COMMAND node --check MDNote/Resources/WebAssets/app/bridge.js
+EXIT 0
+COMMAND node --check MDNote/Resources/WebAssets/app/annotation-layout.js
+EXIT 0
+COMMAND node --check editor/editor.js
+EXIT 0
+COMMAND node --check scripts/check-rich-editor.mjs
+EXIT 0
+COMMAND node --check scripts/check-editor-boundaries.mjs
+EXIT 0
+COMMAND node --check scripts/check-native-ink-contract.mjs
+EXIT 0
+git diff --check EXIT 0
+?? .omo/evidence/baseline-live-ink-search/
+?? .omo/evidence/integration-live-ink/
+?? .omo/evidence/live-ink-workers/
+?? .omo/evidence/mdnote-live-ink-code-review.md
+?? .omo/evidence/root-live-ink/
+?? .omo/teams/

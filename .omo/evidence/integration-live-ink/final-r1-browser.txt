@@ -1,0 +1,13 @@
+310933ac01b671ce98e803eac1181e355a6d1a62
+COMMAND node scripts/check-editor-boundaries.mjs
+Editor boundary checks passed: 25/25. Evidence: C:\Users\picom\orca\MD-Note\.omo\evidence\integration-live-ink\repair-r1-browser
+EXIT 0
+COMMAND node scripts/check-rich-editor.mjs
+Rich editor browser checks passed: 33/33. Evidence: C:\Users\picom\orca\MD-Note\.omo\evidence\integration-live-ink\repair-r1-editor
+EXIT 0
+COMMAND node scripts/check-annotation-layout.mjs
+Annotation layout real DOM checks passed: 27/27. Evidence: C:\Users\picom\orca\MD-Note\.omo\evidence\integration-live-ink\repair-r1-layout
+EXIT 0
+COMMAND node scripts/check-document-search.mjs
+Document search real DOM checks passed: 28/28. Evidence: C:\Users\picom\orca\MD-Note\.omo\evidence\integration-live-ink\repair-r1-search
+EXIT 0

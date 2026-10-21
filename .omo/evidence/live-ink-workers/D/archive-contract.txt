@@ -1,0 +1,2 @@
+PASS: export path-unescape fixture, dependency pin, and archive error localization contracts.
+LIMITATION: JavaScript regex compatibility checks do not execute Swift, Foundation, ZIPFoundation, or UIKit. Native XCTest remains required.

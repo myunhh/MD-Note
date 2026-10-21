@@ -1,0 +1,18 @@
+[
+  {
+    "markdown": "First line\nsecond line!\n",
+    "revision": 5,
+    "composing": false,
+    "historyID": "b9570624-b456-414e-9fb1-a3eac977c207",
+    "edits": [
+      {
+        "blockID": "softbreak-target",
+        "startUTF16": 22,
+        "endUTF16": 22,
+        "insertedText": "!",
+        "oldText": "First line\nsecond line"
+      }
+    ],
+    "mappings": []
+  }
+]

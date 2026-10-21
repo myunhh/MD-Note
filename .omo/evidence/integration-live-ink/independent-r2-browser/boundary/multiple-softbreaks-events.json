@@ -1,0 +1,18 @@
+[
+  {
+    "markdown": "첫 줄\nmiddle 👩‍💻\nlast line!\n",
+    "revision": 11,
+    "composing": false,
+    "historyID": "d95c672a-9ee2-483b-b288-3444228feba9",
+    "edits": [
+      {
+        "blockID": "softbreak-target",
+        "startUTF16": 26,
+        "endUTF16": 26,
+        "insertedText": "!",
+        "oldText": "첫 줄\nmiddle 👩‍💻\nlast line"
+      }
+    ],
+    "mappings": []
+  }
+]

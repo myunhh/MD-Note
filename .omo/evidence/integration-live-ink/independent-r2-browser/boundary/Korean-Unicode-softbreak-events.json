@@ -1,0 +1,18 @@
+[
+  {
+    "markdown": "첫 줄 👩‍💻\n둘째 é 문장!\n",
+    "revision": 8,
+    "composing": false,
+    "historyID": "fc57450f-5cb3-407f-81e6-98c69d9fe3b2",
+    "edits": [
+      {
+        "blockID": "softbreak-target",
+        "startUTF16": 18,
+        "endUTF16": 18,
+        "insertedText": "!",
+        "oldText": "첫 줄 👩‍💻\n둘째 é 문장"
+      }
+    ],
+    "mappings": []
+  }
+]

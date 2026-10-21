@@ -1,0 +1,16 @@
+Annotation-core verification receipt
+Command: git rev-parse HEAD
+b15059c6eccf6efff0fd8dd76376134f2666a8f2
+Command: git status --short
+?? .omo/evidence/annotation-core/receipt.txt
+Command: git diff HEAD --check
+Diff exit: 0
+Command: node MDNoteCore/Tests/parity/anchor_fixture_check.mjs
+PASS: 4 shared Unicode fixtures, 31 UTF16 boundary assertions using Intl.Segmenter.
+Swift implementation is checked by StableAnnotationTests.testSharedUTF16Fixtures on macOS; this invocation does not execute Swift.
+Unicode exit: 0
+Command: node MDNoteCore/Tests/parity/hash_parity.mjs
+hash parity OK: 8/8 cases match Swift golden values.
+Hash parity exit: 0
+Swift available: False
+Judgment: Available Node and diff checks pass. Swift XCTest remains unexecuted because compiler is absent.

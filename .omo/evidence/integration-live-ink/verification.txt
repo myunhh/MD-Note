@@ -1,0 +1,20 @@
+FINAL LOCAL INTEGRATION VERIFICATION
+COMMAND git rev-parse HEAD
+9e03057263b6c6024652019b94722ed681885745
+COMMAND git status --short (after vendor normalization)
+?? .omo/evidence/baseline-live-ink-search/
+?? .omo/evidence/integration-live-ink/
+?? .omo/evidence/root-live-ink/
+?? .omo/reviews/
+?? .omo/teams/
+COMMAND git diff --exit-code; git diff --staged --exit-code
+tracked diff exit=0
+staged diff exit=0
+COMMAND evidence result inspection
+editor/results.json total=33 failed=0
+layout/dom-results.json total=27 failed=0
+search/dom-results.json total=28 failed=0
+COMMAND Get-Command swift,xcodebuild availability
+swift available=False
+xcodebuild available=False
+VERDICT: Executed Windows browser/Node checks pass. Product tree clean. Native Swift/Xcode/Pencil/ZIP/PDF runtime checks UNRUN; root independent review pending. Full matrix: .omo/evidence/integration-live-ink/report.md

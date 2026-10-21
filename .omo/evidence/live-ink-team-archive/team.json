@@ -1,0 +1,311 @@
+{
+  "schemaVersion": 3,
+  "transport": "multi_agent_v2",
+  "teamId": "1233d0be-d07b-4148-867f-e10be6011ffa",
+  "teamName": "mdnote-live-ink",
+  "sessionName": "mdnote-upgrade-20261020",
+  "sessionId": "team-e43dac36",
+  "threadTitleConvention": null,
+  "status": "archived",
+  "createdAt": "2026-10-20T10:19:43.834Z",
+  "updatedAt": "2026-10-20T11:17:20.338Z",
+  "archivedAt": "2026-10-20T11:17:20.338Z",
+  "leader": {
+    "kind": "main-session",
+    "sessionId": null,
+    "agentPath": "/root"
+  },
+  "communication": {
+    "memberLanguage": "english",
+    "replyToUserInUserLanguage": true
+  },
+  "worktree": {
+    "enabled": true,
+    "baseBranch": "main",
+    "root": "C:\\Users\\picom\\orca\\MD-Note\\.omo\\teams\\team-e43dac36\\worktrees"
+  },
+  "paths": {
+    "dir": "C:\\Users\\picom\\orca\\MD-Note\\.omo\\teams\\team-e43dac36",
+    "team": "C:\\Users\\picom\\orca\\MD-Note\\.omo\\teams\\team-e43dac36\\team.json",
+    "guide": "C:\\Users\\picom\\orca\\MD-Note\\.omo\\teams\\team-e43dac36\\guide.md",
+    "artifacts": "C:\\Users\\picom\\orca\\MD-Note\\.omo\\teams\\team-e43dac36\\artifacts"
+  },
+  "members": [
+    {
+      "id": "A",
+      "name": "rendered-editor",
+      "focus": "Rendered Markdown editor, web bridge and native editor controls",
+      "lens": "ownership",
+      "deliverable": "Implement and verify assigned scope in artifacts/upgrade-contract.md; return commit and evidence",
+      "taskName": "mdnote_editor",
+      "agentPath": "/root/mdnote_editor",
+      "threadId": null,
+      "threadTitle": null,
+      "cwd": null,
+      "worktree": {
+        "path": null,
+        "branch": "mdnote-live-ink/rendered-editor"
+      },
+      "status": "archived"
+    },
+    {
+      "id": "B",
+      "name": "annotation-core",
+      "focus": "Stable text anchors, study models and sidecar migration",
+      "lens": "ownership",
+      "deliverable": "Implement and verify assigned scope in artifacts/upgrade-contract.md; return commit and evidence",
+      "taskName": "mdnote_core",
+      "agentPath": "/root/mdnote_core",
+      "threadId": null,
+      "threadTitle": null,
+      "cwd": null,
+      "worktree": {
+        "path": null,
+        "branch": "mdnote-live-ink/annotation-core"
+      },
+      "status": "archived"
+    },
+    {
+      "id": "C",
+      "name": "annotation-layout",
+      "focus": "Text-range geometry, annotation projection and insertion layout",
+      "lens": "ownership",
+      "deliverable": "Implement and verify assigned scope in artifacts/upgrade-contract.md; return commit and evidence",
+      "taskName": "mdnote_layout",
+      "agentPath": "/root/mdnote_layout",
+      "threadId": null,
+      "threadTitle": null,
+      "cwd": null,
+      "worktree": {
+        "path": null,
+        "branch": "mdnote-live-ink/annotation-layout"
+      },
+      "status": "archived"
+    },
+    {
+      "id": "D",
+      "name": "native-ink",
+      "focus": "Pencil input, coordinated saves, ink storage and exports",
+      "lens": "ownership",
+      "deliverable": "Implement and verify assigned scope in artifacts/upgrade-contract.md; return commit and evidence",
+      "taskName": "mdnote_native",
+      "agentPath": "/root/mdnote_native",
+      "threadId": null,
+      "threadTitle": null,
+      "cwd": null,
+      "worktree": {
+        "path": null,
+        "branch": "mdnote-live-ink/native-ink"
+      },
+      "status": "archived"
+    },
+    {
+      "id": "I",
+      "name": "astra-integration",
+      "focus": "Local branch integration and bug verification",
+      "lens": "ownership",
+      "deliverable": "Implement and verify assigned scope in artifacts/upgrade-contract.md; return commit and evidence",
+      "taskName": "mdnote_integrate",
+      "agentPath": "/root/mdnote_integrate",
+      "threadId": null,
+      "threadTitle": null,
+      "cwd": "C:/Users/picom/orca/MD-Note",
+      "worktree": {
+        "path": "C:/Users/picom/orca/MD-Note",
+        "branch": "mdnote-live-ink/astra-integration"
+      },
+      "status": "archived"
+    },
+    {
+      "id": "R",
+      "name": "astra-correctness-review",
+      "focus": "Read-only correctness review of final integrated live editor and anchored ink",
+      "lens": "perspective",
+      "deliverable": "Evidence-backed final SHA verdict using artifacts/astra-review-capsule.md",
+      "taskName": "mdnote_review",
+      "agentPath": "/root/mdnote_review",
+      "threadId": null,
+      "threadTitle": null,
+      "cwd": "C:/Users/picom/orca/MD-Note/.omo/reviews/live-ink-9e03057",
+      "worktree": {
+        "path": "C:/Users/picom/orca/MD-Note/.omo/reviews/live-ink-9e03057",
+        "branch": null
+      },
+      "status": "archived"
+    },
+    {
+      "id": "R2",
+      "name": "astra-repair-review",
+      "focus": "Read-only verification of repaired geometry adapter and reference softbreak regressions",
+      "lens": "perspective",
+      "deliverable": "Fresh exact-SHA verdict for H1-H3 repair and nearby regression risk",
+      "taskName": "mdnote_review_r2",
+      "agentPath": "/root/mdnote_review_r2",
+      "threadId": null,
+      "threadTitle": null,
+      "cwd": "C:/Users/picom/orca/MD-Note/.omo/reviews/live-ink-310933a",
+      "worktree": {
+        "path": "C:/Users/picom/orca/MD-Note/.omo/reviews/live-ink-310933a",
+        "branch": null
+      },
+      "status": "archived"
+    }
+  ],
+  "log": [
+    {
+      "ts": "2026-10-20T10:19:43.834Z",
+      "event": "created",
+      "detail": "team mdnote-live-ink"
+    },
+    {
+      "ts": "2026-10-20T10:21:41.044Z",
+      "event": "add-member",
+      "detail": "member A (ownership): Rendered Markdown editor, web bridge and native editor controls"
+    },
+    {
+      "ts": "2026-10-20T10:21:41.103Z",
+      "event": "add-member",
+      "detail": "member B (ownership): Stable text anchors, study models and sidecar migration"
+    },
+    {
+      "ts": "2026-10-20T10:21:41.162Z",
+      "event": "add-member",
+      "detail": "member C (ownership): Text-range geometry, annotation projection and insertion layout"
+    },
+    {
+      "ts": "2026-10-20T10:21:41.221Z",
+      "event": "add-member",
+      "detail": "member D (ownership): Pencil input, coordinated saves, ink storage and exports"
+    },
+    {
+      "ts": "2026-10-20T10:21:41.280Z",
+      "event": "add-member",
+      "detail": "member I (ownership): Local branch integration and bug verification"
+    },
+    {
+      "ts": "2026-10-20T10:21:41.556Z",
+      "event": "worktree-add",
+      "detail": "member A -> C:\\Users\\picom\\orca\\MD-Note\\.omo\\teams\\team-e43dac36\\worktrees\\A (mdnote-live-ink/rendered-editor)"
+    },
+    {
+      "ts": "2026-10-20T10:21:41.835Z",
+      "event": "worktree-add",
+      "detail": "member B -> C:\\Users\\picom\\orca\\MD-Note\\.omo\\teams\\team-e43dac36\\worktrees\\B (mdnote-live-ink/annotation-core)"
+    },
+    {
+      "ts": "2026-10-20T10:21:42.099Z",
+      "event": "worktree-add",
+      "detail": "member C -> C:\\Users\\picom\\orca\\MD-Note\\.omo\\teams\\team-e43dac36\\worktrees\\C (mdnote-live-ink/annotation-layout)"
+    },
+    {
+      "ts": "2026-10-20T10:21:42.345Z",
+      "event": "worktree-add",
+      "detail": "member D -> C:\\Users\\picom\\orca\\MD-Note\\.omo\\teams\\team-e43dac36\\worktrees\\D (mdnote-live-ink/native-ink)"
+    },
+    {
+      "ts": "2026-10-20T10:22:51.671Z",
+      "event": "bind-agent",
+      "detail": "member A -> agent /root/mdnote_editor"
+    },
+    {
+      "ts": "2026-10-20T10:22:51.737Z",
+      "event": "bind-agent",
+      "detail": "member B -> agent /root/mdnote_core"
+    },
+    {
+      "ts": "2026-10-20T10:22:51.807Z",
+      "event": "bind-agent",
+      "detail": "member C -> agent /root/mdnote_layout"
+    },
+    {
+      "ts": "2026-10-20T10:22:51.882Z",
+      "event": "bind-agent",
+      "detail": "member D -> agent /root/mdnote_native"
+    },
+    {
+      "ts": "2026-10-20T10:23:41.153Z",
+      "event": "bind-agent",
+      "detail": "member I -> agent /root/mdnote_integrate"
+    },
+    {
+      "ts": "2026-10-20T10:29:51.349Z",
+      "event": "set-status",
+      "detail": "member C -> reported: Feature committed at de9ea3aeca6f7f14c1b45cbe385ed88475677714; reported 27/27 owned Chrome checks"
+    },
+    {
+      "ts": "2026-10-20T10:32:25.548Z",
+      "event": "set-status",
+      "detail": "member B -> reported: Committed b15059c6eccf6efff0fd8dd76376134f2666a8f2; 31 Unicode fixture assertions and 8 hash cases passed; Swift tests authored but unavailable"
+    },
+    {
+      "ts": "2026-10-20T10:42:36.984Z",
+      "event": "set-status",
+      "detail": "member D -> reported: Committed 32de5e008d877e8ce2ea81745ed5df45198a3041; source-contract/archive fixture checks pass, native runtime unavailable"
+    },
+    {
+      "ts": "2026-10-20T10:43:47.358Z",
+      "event": "set-status",
+      "detail": "member A -> reported: Committed b401faa6ad20af7b80f33b7975375d4bf3a3dc4d; 28 editor + 28 search DOM checks, 18 archive fixtures and audit zero reported"
+    },
+    {
+      "ts": "2026-10-20T10:55:47.358Z",
+      "event": "add-member",
+      "detail": "member R (perspective): Read-only correctness review of final integrated live editor and anchored ink"
+    },
+    {
+      "ts": "2026-10-20T10:56:08.609Z",
+      "event": "bind-agent",
+      "detail": "member R -> agent /root/mdnote_review"
+    },
+    {
+      "ts": "2026-10-20T10:57:21.698Z",
+      "event": "worktree-remove",
+      "detail": "member A"
+    },
+    {
+      "ts": "2026-10-20T10:57:21.906Z",
+      "event": "worktree-remove",
+      "detail": "member B"
+    },
+    {
+      "ts": "2026-10-20T10:57:22.104Z",
+      "event": "worktree-remove",
+      "detail": "member C"
+    },
+    {
+      "ts": "2026-10-20T10:57:22.304Z",
+      "event": "worktree-remove",
+      "detail": "member D"
+    },
+    {
+      "ts": "2026-10-20T11:02:37.816Z",
+      "event": "set-status",
+      "detail": "member R -> reported: REJECT 9e03057263b6c6024652019b94722ed681885745: H1 native ID adapter, H2 shortcut reference loss, H3 softbreak false deletion; report preserved"
+    },
+    {
+      "ts": "2026-10-20T11:11:06.047Z",
+      "event": "add-member",
+      "detail": "member R2 (perspective): Read-only verification of repaired geometry adapter and reference softbreak regressions"
+    },
+    {
+      "ts": "2026-10-20T11:11:29.608Z",
+      "event": "bind-agent",
+      "detail": "member R2 -> agent /root/mdnote_review_r2"
+    },
+    {
+      "ts": "2026-10-20T11:17:20.085Z",
+      "event": "set-status",
+      "detail": "member I -> reported: Integrated and repaired local main310933ac01b671ce98e803eac1181e355a6d1a62; final checks pass; native runtime unrun"
+    },
+    {
+      "ts": "2026-10-20T11:17:20.146Z",
+      "event": "set-status",
+      "detail": "member R2 -> reported: APPROVE310933ac01b671ce98e803eac1181e355a6d1a62, fresh boundary25/editor33/static10; no established blockers"
+    },
+    {
+      "ts": "2026-10-20T11:17:20.338Z",
+      "event": "archive",
+      "detail": "All feature/integration/review agents completed; source310933ac01b671ce98e803eac1181e355a6d1a62 approved locally. Native Mac/iPad runtime deferred by user. V2 has no runtime archive API; this archives durable team state only. Temporary review result directories retained after policy blocked deletion."
+    }
+  ]
+}

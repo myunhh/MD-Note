@@ -1,0 +1,30 @@
+[
+  {
+    "name": "real rich DOM keyboard edit",
+    "passed": true
+  },
+  {
+    "name": "frontmatter CRLF references and table remain exact",
+    "passed": true
+  },
+  {
+    "name": "text edit DTO includes old UTF16 text",
+    "passed": true
+  },
+  {
+    "name": "rich undo restores source",
+    "passed": true
+  },
+  {
+    "name": "rich redo reapplies source",
+    "passed": true
+  },
+  {
+    "name": "composition blocks flush and emits no save",
+    "passed": true
+  },
+  {
+    "name": "unsupported table uses deliberate source fallback",
+    "passed": true
+  }
+]

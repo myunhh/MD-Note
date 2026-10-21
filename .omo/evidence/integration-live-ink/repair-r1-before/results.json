@@ -1,0 +1,10 @@
+[
+  {
+    "name": "actual JS layout emits stable identities for the native adapter fixture",
+    "passed": true
+  },
+  {
+    "name": "shortcut link requires source-preserving editor",
+    "passed": false
+  }
+]

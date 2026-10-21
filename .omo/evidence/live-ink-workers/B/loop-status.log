@@ -1,0 +1,8 @@
+{
+  "ok": false,
+  "error": {
+    "code": "ULW_LOOP_PLAN_MISSING",
+    "message": "No ulw-loop plan found at .omo/ulw-loop/01a158be-18fc-7383-8fb0-89aebb32f0d3/goals.json.\nRecovery: bootstrap the plan with `omo-agent-toolkit ulw-loop create-goals --brief \"<brief>\" --json`."
+  }
+}
+Exit: 1
